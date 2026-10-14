@@ -19,7 +19,7 @@
     --gold: #8A6A2F; --gold-hi: #D8B26E; --gold-ink: #1A1408;
     --act: #1C1916; --on-act: #F5F2EC;
     --ok: #1F6E4C; --ok-bg: #E1F0E7; --warn: #7A5410; --warn-bg: #FBEFD5; --err: #9A2F1C; --err-bg: #FBE6E1;
-    --d1: #9B3F4B; --d2: #B47A1E; --d3: #2E7C77; --d4: #4C6890;
+    --d1: #9B3F4B; --d2: #B47A1E; --d3: #2E7C77; --d4: #4C6890; --d5: #8A6A3E; --d6: #5C7A3A; --d7: #B0593A; --d8: #3F7891;
     --r-surface: 16px; --r-field: 10px;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --f-display: 'Frank Ruhl Libre', 'Times New Roman', serif;
@@ -34,7 +34,7 @@
       --gold: #D8B26E;
       --act: #D8B26E; --on-act: #1A1408;
       --ok: #7FD3A6; --ok-bg: #173226; --warn: #F1D08A; --warn-bg: #362B14; --err: #F7B9AA; --err-bg: #3A1D17;
-      --d1: #D47884; --d2: #E0A64A; --d3: #5DB8B1; --d4: #8EA6CF;
+      --d1: #D47884; --d2: #E0A64A; --d3: #5DB8B1; --d4: #8EA6CF; --d5: #C9A27A; --d6: #9FC27E; --d7: #E08F6A; --d8: #7FB3C9;
       color-scheme: dark;
     }
   }
@@ -247,6 +247,8 @@
   .login .err { color: #F7B9AA; font-weight: 700; text-align: center; margin: 0; }
 
   [hidden] { display: none !important; }
+  .no-geo .geo { display: none !important; }
+  body:not(.no-geo) .no-geo-only { display: none !important; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   }
@@ -291,7 +293,7 @@
         <button role="tab" data-tab="report" aria-selected="false">דוח ותשלומים</button>
         <button role="tab" data-tab="shifts" aria-selected="false">משמרות <span class="count" id="openCount" hidden></span></button>
         <button role="tab" data-tab="workers" aria-selected="false">עובדים</button>
-        <button role="tab" data-tab="settings" aria-selected="false">הגדרות תשלום</button>
+        <button role="tab" data-tab="settings" aria-selected="false">מחלקות ותשלום</button>
       </nav>
     </div>
   </header>
@@ -305,7 +307,7 @@
           <label class="f">שם האירוע<input id="evName" required placeholder="חתונת דנה ויואב · אולם הגפן"></label>
           <label class="f" style="flex:0 1 190px">תאריך<input type="date" id="evDate" required></label>
         </div>
-        <div class="row">
+        <div class="row geo">
           <label class="f">מיקום האולם<input id="evPlace" placeholder="הדבקת קישור מגוגל מפות" dir="auto"></label>
           <button class="btn ghost" type="button" id="evHere">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
@@ -317,7 +319,10 @@
             יצירת אירוע וברקוד
           </button>
         </div>
-        <p class="note">עם מיקום: עובדים יוכלו לסמן כניסה ויציאה רק בתוך הרדיוס מהאולם. בלי מיקום: המיקום רק נרשם. סימון אפשרי רק ביום האירוע וביום שאחריו.</p>
+        <div class="row no-geo-only"><button class="btn" id="evBtn2" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            יצירת אירוע וברקוד</button></div>
+        <p class="note geo">עם מיקום: עובדים יוכלו לסמן כניסה ויציאה רק בתוך הרדיוס מהאולם. בלי מיקום: המיקום רק נרשם. סימון אפשרי רק ביום האירוע וביום שאחריו.</p>
       </form>
 
       <div class="card" id="qrCard" hidden>
@@ -392,8 +397,8 @@
     <!-- הגדרות -->
     <section id="tab-settings" role="tabpanel" hidden>
       <form class="card" id="setForm">
-        <div class="head"><h2>תשלום לפי מחלקה</h2></div>
-        <p class="note">שעתי: תעריף × שעות. גלובלי: סכום קבוע פעם אחת לאירוע. שעות נוספות נספרות על סך השעות של העובד באותו אירוע, וכל שעה מעבר לסף מוסיפה את התוספת (חצי שעה = חצי תוספת). השינוי חל על משמרות שייסגרו מעכשיו.</p>
+        <div class="head"><h2>מחלקות ותשלום</h2></div>
+        <p class="note">כל מחלקה כאן מופיעה לעובדים בהרשמה. שעתי: תעריף × שעות. גלובלי: סכום קבוע פעם אחת לאירוע. שעות נוספות נספרות על סך השעות של העובד באותו אירוע, וכל שעה מעבר לסף מוסיפה את התוספת (חצי שעה = חצי תוספת). השינוי חל על משמרות שייסגרו מעכשיו.</p>
         <div class="policies" id="policies"></div>
         <div class="savebar">
           <span class="note" id="setStatus"></span>
@@ -419,7 +424,7 @@
 <script>
   const SITE = new URL('./', location.href).href;
   const $ = id => document.getElementById(id);
-  const DCOL = { 'מלצרים': 'var(--d1)', 'טבחים': 'var(--d2)', 'מנקים': 'var(--d3)', 'לוגיסטיקה': 'var(--d4)' };
+  const dc = d => { const i = DEPTS.indexOf(d); return i < 0 ? 'var(--faint)' : 'var(--d' + (i % 8 + 1) + ')'; };
   const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
   const svg = (d, w) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (w || 1.75) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const I = {
@@ -439,12 +444,12 @@
     pin: svg('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/>'),
     print: svg('<path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/>')
   };
-  let PW = '', DEPTS = [], EVENTS = [], WORKERS = [], POLICY = [], lastFilter = null;
+  let GEO = false, PW = '', DEPTS = [], EVENTS = [], WORKERS = [], POLICY = [], lastFilter = null;
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const money = n => '₪' + Number(n || 0).toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const hrs = n => Number(n || 0).toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-  const dept = d => '<span class="dept" style="--dc:' + (DCOL[d] || 'var(--faint)') + '">' + esc(d) + '</span>';
+  const dept = d => '<span class="dept" style="--dc:' + dc(d) + '">' + esc(d) + '</span>';
   const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const today = () => ymd(new Date());
   const empty = (icon, title, text) => '<div class="empty">' + I[icon] + '<b>' + esc(title) + '</b>' + (text ? '<span>' + esc(text) + '</span>' : '') + '</div>';
@@ -491,6 +496,7 @@
       const r = await call('adminLogin');
       DEPTS = r.depts;
       $('ver').textContent = 'גרסה ' + (r.version || '');
+      GEO = !!r.geo; document.body.classList.toggle('no-geo', !GEO);
       try { sessionStorage.setItem('sc_pw', pw); } catch (e) {}
       $('loginBox').hidden = true; $('app').hidden = false;
       $('fDept').innerHTML = '<option value="">כל המחלקות</option>' + DEPTS.map(d => '<option>' + esc(d) + '</option>').join('');
@@ -543,10 +549,10 @@
           '<span>' + e.workers + ' עובדים</span>' +
           (e.open ? '<span class="tag warn">' + e.open + ' פתוחות</span>' : '') +
           (e.active ? '<span class="tag ok">פתוח לסימון</span>' : '<span class="tag off">סגור</span>') +
-          (e.lat != null ? '<a class="tag ok" href="https://maps.google.com/?q=' + e.lat + ',' + e.lng + '" target="_blank" rel="noopener">' + I.pin + 'מיקום · ' + e.radius + ' מ׳</a>' : '<span class="tag warn">' + I.pin + 'בלי מיקום</span>') +
+          (!GEO ? '' : e.lat != null ? '<a class="tag ok" href="https://maps.google.com/?q=' + e.lat + ',' + e.lng + '" target="_blank" rel="noopener">' + I.pin + 'מיקום · ' + e.radius + ' מ׳</a>' : '<span class="tag warn">' + I.pin + 'בלי מיקום</span>') +
         '</span></div>' +
         '<div class="ev-act">' +
-          '<button class="btn sm ghost" data-place="' + esc(e.code) + '">' + I.pin + 'מיקום</button>' +
+          (GEO ? '<button class="btn sm ghost" data-place="' + esc(e.code) + '">' + I.pin + 'מיקום</button>' : '') +
           '<button class="btn sm ghost" data-qr="' + esc(e.code) + '">' + I.qr + 'ברקוד</button>' +
           '<button class="btn sm ghost" data-rep="' + esc(e.code) + '">' + I.rep + 'דוח</button>' +
           '<button class="btn sm ghost" data-act="' + esc(e.code) + '" data-v="' + (!e.active) + '">' + (e.active ? I.lock + 'סגירה' : I.open + 'פתיחה') + '</button>' +
@@ -611,16 +617,16 @@
     } catch (x) { err(x.message); busy(btn, false); }
   }
   $('newEvent').addEventListener('submit', async e => {
-    e.preventDefault(); busy($('evBtn'), true);
+    e.preventDefault(); busy($('evBtn'), true); busy($('evBtn2'), true);
     try {
-      const code = await call('createEvent', $('evName').value, $('evDate').value, $('evPlace').value.trim(), $('evRadius').value);
+      const code = await call('createEvent', $('evName').value, $('evDate').value, GEO ? $('evPlace').value.trim() : '', $('evRadius').value);
       const [y, m, d] = $('evDate').value.split('-');
       showQr(code, $('evName').value, d + '/' + m + '/' + y);
       $('evName').value = ''; $('evPlace').value = '';
       ok('האירוע נוצר. מדפיסים את הברקוד ותולים בכניסה לצוות.');
       loadEvents();
     } catch (x) { err(x.message); }
-    busy($('evBtn'), false);
+    busy($('evBtn'), false); busy($('evBtn2'), false);
   });
 
   let qrData = null;
@@ -747,7 +753,7 @@
         '<span class="v' + (t.due <= 0 ? ' zero' : '') + '">' + money(Math.abs(t.due)) + '</span>' +
         '<span class="s">מתוך ' + money(t.pay) + ' · ' + hrs(t.hours) + ' שעות' + (t.otHours ? ' (' + hrs(t.otHours) + ' נוספות)' : '') + ' · ' + t.workers + ' עובדים</span></div>' +
       (t.pay > 0 ? '<div class="paidbar"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><div class="lbl"><span>שולם ' + money(t.paid) + '</span><span>' + pct + '%</span></div></div>' : '') +
-      '<div class="legend">' + depts.map(d => '<div class="' + (d.pay ? '' : 'zero') + '" style="--dc:' + DCOL[d.dept] + '"><span class="k">' + esc(d.dept) + '</span><span class="v">' + money(d.pay) + '</span><span class="s">' + (d.due > 0 ? 'נשאר ' + money(d.due) + ' · ' : '') + hrs(d.hours) + ' שעות · ' + d.workers + ' עובדים</span></div>').join('') + '</div>' +
+      '<div class="legend">' + depts.map(d => '<div class="' + (d.pay ? '' : 'zero') + '" style="--dc:' + dc(d.dept) + '"><span class="k">' + esc(d.dept) + '</span><span class="v">' + money(d.pay) + '</span><span class="s">' + (d.due > 0 ? 'נשאר ' + money(d.due) + ' · ' : '') + hrs(d.hours) + ' שעות · ' + d.workers + ' עובדים</span></div>').join('') + '</div>' +
       '</div>';
     h += '<div class="card"><div class="head"><h2>לפי עובד</h2><div class="acts no-print"><button class="btn ghost" id="printRep">' + I.print + 'הדפסה</button><button class="btn ghost" id="exportBtn"' + (r.workers.length ? '' : ' disabled') + '>' + I.sheet + 'ייצוא לגיליון</button></div></div>';
     h += r.workers.length ? '<div class="tbl"><table><thead><tr><th>שם</th><th>מחלקה</th><th>טלפון</th><th class="num">משמרות</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th class="num">שולם</th><th class="num">נשאר</th><th></th></tr></thead><tbody>' +
@@ -840,10 +846,13 @@
     return 'דוגמה: ' + h + ' שעות באירוע = <b>' + money(total) + '</b>' + (ot && p.otExtra ? ' <span class="muted-s">(' + (p.method === 'גלובלי' ? money(p.rate) : h + '×' + money(p.rate)) + ' + ' + hrs(ot) + '×' + money(p.otExtra) + ')</span>' : '');
   }
   function polCard(p, i) {
-    const n = 'm' + i;
-    return '<div class="card pol" data-dept="' + esc(p.dept) + '" style="--dc:' + DCOL[p.dept] + ';box-shadow:none;background:var(--ground)">' +
-      '<h3>' + dept(p.dept) + '</h3>' +
-      '<div class="seg" role="radiogroup" aria-label="שיטת תשלום ' + esc(p.dept) + '">' +
+    const n = 'm' + i, isNew = !!p.isNew;
+    return '<div class="card pol" data-i="' + i + '" data-dept="' + esc(p.dept) + '" style="--dc:' + (isNew ? 'var(--gold)' : dc(p.dept)) + ';box-shadow:none;background:var(--ground)">' +
+      '<div class="head">' + (isNew
+        ? '<label class="f" style="flex:1">שם המחלקה<input data-f="name" value="' + esc(p.dept) + '" placeholder="למשל: ברמנים" maxlength="30" required></label>'
+        : '<h3>' + dept(p.dept) + '</h3>' + (p.workers ? '<span class="muted-s">' + p.workers + ' עובדים</span>' : '')) +
+        (p.workers ? '' : '<button class="link" type="button" data-rmdept>הסרה</button>') + '</div>' +
+      '<div class="seg" role="radiogroup" aria-label="שיטת תשלום">' +
         '<label><input type="radio" name="' + n + '" value="שעתי"' + (p.method !== 'גלובלי' ? ' checked' : '') + '><span>לפי שעה</span></label>' +
         '<label><input type="radio" name="' + n + '" value="גלובלי"' + (p.method === 'גלובלי' ? ' checked' : '') + '><span>גלובלי לאירוע</span></label></div>' +
       '<div class="grid">' +
@@ -854,28 +863,63 @@
   }
   function readPolicies() {
     return [...document.querySelectorAll('.pol')].map(c => ({
-      dept: c.dataset.dept,
+      dept: c.querySelector('[data-f=name]') ? c.querySelector('[data-f=name]').value.trim() : c.dataset.dept,
       method: c.querySelector('input[type=radio]:checked').value,
       rate: Number(c.querySelector('[data-f=rate]').value),
       otAfter: Number(c.querySelector('[data-f=otAfter]').value),
       otExtra: Number(c.querySelector('[data-f=otExtra]').value)
     }));
   }
+  function drawPolicies() {
+    $('policies').innerHTML = POLICY.map(polCard).join('') +
+      '<button type="button" class="card" id="addDept" style="place-items:center;align-content:center;min-height:200px;border:2px dashed var(--surface-3);background:none;box-shadow:none;color:var(--muted);font-weight:800;font-size:17px">' +
+      '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>הוספת מחלקה</button>';
+  }
+  function syncPolicyFromDom() {
+    const cur = readPolicies();
+    POLICY = POLICY.map((p, i) => Object.assign({}, p, cur[i]));
+  }
   async function loadSettings() {
     $('policies').innerHTML = '<span class="sk" style="height:220px;border-radius:16px"></span>'.repeat(2);
-    try { POLICY = (await call('getSettings')).depts; $('policies').innerHTML = POLICY.map(polCard).join(''); $('setStatus').textContent = ''; }
+    try { POLICY = (await call('getSettings')).depts; drawPolicies(); $('setStatus').textContent = ''; }
     catch (x) { err(x.message); }
   }
   $('policies').addEventListener('input', e => {
     const c = e.target.closest('.pol'); if (!c) return;
-    const p = readPolicies().find(x => x.dept === c.dataset.dept);
+    const p = readPolicies()[+c.dataset.i];
     c.querySelector('[data-ratelbl]').textContent = p.method === 'גלובלי' ? 'סכום לאירוע' : 'תעריף לשעה';
     c.querySelector('[data-ex]').innerHTML = example(p);
     $('setStatus').textContent = 'יש שינויים שלא נשמרו';
   });
+  $('policies').addEventListener('click', e => {
+    if (e.target.closest('#addDept')) {
+      syncPolicyFromDom();
+      POLICY.push({ dept: '', method: 'שעתי', rate: 40, otAfter: 8, otExtra: 0, workers: 0, isNew: true });
+      drawPolicies();
+      $('policies').querySelector('.pol:last-of-type [data-f=name]').focus();
+      $('setStatus').textContent = 'יש שינויים שלא נשמרו';
+    }
+    const rm = e.target.closest('[data-rmdept]');
+    if (rm) {
+      syncPolicyFromDom();
+      POLICY.splice(+rm.closest('.pol').dataset.i, 1);
+      drawPolicies();
+      $('setStatus').textContent = 'יש שינויים שלא נשמרו · ההסרה תתבצע בשמירה';
+    }
+  });
   $('setForm').addEventListener('submit', async e => {
-    e.preventDefault(); busy($('setBtn'), true);
-    try { POLICY = (await call('saveSettings', readPolicies())).depts; $('setStatus').textContent = ''; ok('ההגדרות נשמרו. יחולו על משמרות שייסגרו מעכשיו.'); }
+    e.preventDefault();
+    const list = readPolicies();
+    if (list.some(p => p.dept.length < 2)) return err('לכל מחלקה צריך שם');
+    busy($('setBtn'), true);
+    try {
+      POLICY = (await call('saveSettings', list)).depts;
+      DEPTS = POLICY.map(p => p.dept);
+      $('fDept').innerHTML = '<option value="">כל המחלקות</option>' + DEPTS.map(d => '<option>' + esc(d) + '</option>').join('');
+      WORKERS = [];
+      drawPolicies(); $('setStatus').textContent = '';
+      ok('ההגדרות נשמרו. יחולו על משמרות שייסגרו מעכשיו.');
+    }
     catch (x) { err(x.message); }
     busy($('setBtn'), false);
   });

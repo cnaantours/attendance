@@ -19,7 +19,6 @@
     --out: #C4553B; --out-hi: #D8654A; --out-ink: #FFF6F2;
     --warn-bg: #3A2E15; --warn-ink: #F1D08A;
     --err-bg: #3E1E18; --err-ink: #F7B9AA;
-    --d-מלצרים: #D47884; --d-טבחים: #E0A64A; --d-מנקים: #5DB8B1; --d-לוגיסטיקה: #8EA6CF;
     --r-surface: 16px; --r-field: 10px; --r-big: 22px;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --f-display: 'Frank Ruhl Libre', 'Times New Roman', serif;
@@ -264,7 +263,7 @@
     <div class="msg warn" id="inactive" hidden>האירוע סגור כרגע לסימון נוכחות. כדאי לפנות לאחראי המשמרת.</div>
     <button class="big in" id="inBtn" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M3 12h11M10 8l4 4-4 4"/></svg>
-      <b>כניסה למשמרת</b><span>השעה והמיקום יירשמו עכשיו</span>
+      <b>כניסה למשמרת</b><span id="inSub">השעה תירשם עכשיו</span>
     </button>
     <button class="big out" id="outBtn" hidden>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M21 12H10M17 8l4 4-4 4"/></svg>
@@ -300,6 +299,9 @@
   function store(v) { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) {} }
   function stored() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
   const pad = n => String(n).padStart(2, '0');
+  /* צבע לכל מחלקה לפי הסדר שלה ברשימה (המחלקות נקבעות במסך הניהול) */
+  const PAL = ['#D47884', '#E0A64A', '#5DB8B1', '#8EA6CF', '#C9A27A', '#9FC27E', '#E08F6A', '#7FB3C9'];
+  const dcol = d => { const i = state && state.depts ? state.depts.indexOf(d) : -1; return i < 0 ? 'var(--gold)' : PAL[i % PAL.length]; };
 
   /* שעון חי בפס העליון */
   function clock() { const d = new Date(); $('now').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()); }
@@ -354,7 +356,7 @@
         l.innerHTML = '<input type="radio" name="dept"' + (i === 0 ? ' required' : '') + '><span></span>';
         l.firstChild.value = d;
         l.lastChild.textContent = d;
-        l.lastChild.style.setProperty('--dc', 'var(--d-' + d + ', var(--gold))');
+        l.lastChild.style.setProperty('--dc', dcol(d));
         $('depts').appendChild(l);
       });
     }
@@ -373,12 +375,13 @@
     $('wName').textContent = w.name;
     $('wDept').textContent = w.dept;
     $('wInit').textContent = String(w.name || '').trim().charAt(0);
-    $('wInit').style.setProperty('--dc', 'var(--d-' + w.dept + ', var(--gold))');
+    $('wInit').style.setProperty('--dc', dcol(w.dept));
     $('openBox').hidden = !open;
     $('otherEvent').hidden = true;
     $('inactive').hidden = true;
     $('inactive').textContent = 'האירוע סגור כרגע לסימון נוכחות. כדאי לפנות לאחראי המשמרת.';
     $('inBtn').hidden = true;
+    $('inSub').textContent = state.geo ? 'השעה והמיקום יירשמו עכשיו' : 'השעה תירשם עכשיו';
     $('outBtn').hidden = !open;
     disarm();
     clearInterval(tick);
@@ -464,7 +467,7 @@
   $('inBtn').addEventListener('click', async () => {
     err(''); busy($('inBtn'), true);
     try {
-      const r = await call('clockIn', token, EVENT, await getLoc());
+      const r = await call('clockIn', token, EVENT, state.geo ? await getLoc() : null);
       doneScreen('in', r.time, 'משמרת טובה!', 'בסוף המשמרת סורקים שוב ולוחצים "יציאה"');
     } catch (x) { err(x.message); }
     busy($('inBtn'), false);
@@ -490,7 +493,7 @@
     clearTimeout(armTimer);
     err(''); busy(b, true);
     try {
-      const r = await call('clockOut', token, await getLoc());
+      const r = await call('clockOut', token, state.geo ? await getLoc() : null);
       const h = Math.floor(r.hours), m = Math.round((r.hours - h) * 60);
       doneScreen('out', r.time, h + ' שעות ו־' + m + ' דקות', 'תודה על הערב!');
     } catch (x) { err(x.message); disarm(); }
