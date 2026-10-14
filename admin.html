@@ -50,7 +50,8 @@
   .top { display: flex; align-items: center; gap: 12px; padding-block: 16px 4px; }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand svg { width: 24px; height: 24px; color: var(--gold-hi); }
-  .brand h1 { margin: 0; font: 700 1.5rem/1.2 var(--f-display); }
+  .brand h1 { margin: 0; font: 700 1.5rem/1.2 var(--f-display); white-space: nowrap; }
+  @media (max-width: 640px) { .top .ver { display: none; } .top .brand h1 { font-size: 1.25rem; } .signout { margin-inline-start: auto; } }
   .ver { margin-inline-start: auto; color: var(--shell-muted); font-size: 13px; font-weight: 600; }
   .signout { background: none; color: var(--shell-muted); padding: 8px 10px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-flex; gap: 6px; align-items: center; }
   .signout:hover { color: var(--shell-ink); background: var(--shell-2); }
@@ -68,6 +69,39 @@
 
   main { max-width: 1180px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-right)) 96px max(16px, env(safe-area-inset-left)); display: grid; gap: 20px; }
   section { display: grid; gap: 20px; min-width: 0; }
+  section > *, main > * { min-width: 0; }
+  #repOut > *, #shiftsOut > * { min-width: 0; }
+  details.card { display: block; overflow: hidden; }
+  details.card > summary { padding: 2px 0; }
+  details.card[open] > summary { margin-bottom: 14px; }
+  .tbl { max-width: calc(100% + 40px); }
+  .card > * { min-width: 0; }
+  td.br { display: none; }
+  /* בנייד: כל שורה בטבלה הופכת לכרטיס קומפקטי. k = שם, v = הסכום, m = פרטים קטנים עם תווית, a = פעולות */
+  @media (max-width: 700px) {
+    table.stack thead, table.stack tfoot { display: none; }
+    table.stack, table.stack tbody { display: block; }
+    table.stack tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; padding: 14px 0; border-top: 1px solid var(--line); }
+    table.stack tbody tr:first-child { border-top: 0; }
+    table.stack td { border: 0; padding: 0; white-space: normal; text-align: right; }
+    table.stack tbody tr:hover td { background: none; }
+    table.stack td.k { order: 1; flex: 1 1 auto; font-size: 17px; }
+    table.stack td.v { order: 2; font-size: 17px; font-weight: 800; }
+    table.stack td.m { order: 3; font-size: 14px; color: var(--muted); font-weight: 600; }
+    table.stack td.m:empty { display: none; }
+    table.stack td.m[data-l]::before { content: attr(data-l) ' '; color: var(--faint); font-weight: 600; }
+    table.stack td.br { display: block; order: 3; flex-basis: 100%; height: 0; }
+    table.stack td.a { order: 4; flex-basis: 100%; margin-top: 8px; }
+    table.stack td.a .acts { justify-content: stretch; }
+    table.stack td.a .btn { flex: 1; padding-block: 10px; }
+    table.stack tr.editing { background: color-mix(in srgb, var(--gold-hi) 12%, transparent); border-radius: 12px; padding-inline: 10px; }
+    table.stack tr.editing td { background: none !important; }
+    table.stack tr.editing td[data-c] { flex-basis: 100%; }
+    table.stack tr.editing td[data-c]::before { display: block; margin-bottom: 4px; }
+    table.stack td.m select, table.stack td.m .unit { width: 100% !important; }
+    table.stack td.m:has(select), table.stack td.m:has(input) { flex: 1 1 140px; }
+    .tbl:has(table.stack) { margin-inline: 0; padding-inline: 0; overflow: visible; }
+  }
   h2 { margin: 0; font: 700 1.25rem/1.3 var(--f-display); }
   h3 { margin: 0; font: 800 1.0625rem/1.3 var(--f-ui); }
   .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -139,8 +173,11 @@
   .ev-name { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ev-meta { display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 14px; font-weight: 600; }
   .code { font-weight: 800; letter-spacing: .08em; color: var(--ink); direction: ltr; unicode-bidi: isolate; }
-  .ev-act { display: flex; gap: 6px; flex-wrap: wrap; }
-  @media (max-width: 760px) { .ev { grid-template-columns: auto 1fr; } .ev-act { grid-column: 1 / -1; } .ev-act .btn { flex: 1; } }
+  .ev-act { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .ev-panel { padding: 14px 16px 16px; margin: 0 8px 10px; margin-inline-start: 82px; background: var(--surface-2); border-radius: 12px; }
+  .ev-panel input { background: var(--surface); }
+  @media (max-width: 760px) { .ev-panel { margin-inline-start: 8px; } .ev-panel .btn { flex: 1; } }
+  @media (max-width: 760px) { .ev { grid-template-columns: auto 1fr; } .ev-act { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); } }
 
   /* ברקוד */
   .qr-panel { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
@@ -306,6 +343,9 @@
         <div class="row">
           <label class="f">שם האירוע<input id="evName" required placeholder="חתונת דנה ויואב · אולם הגפן"></label>
           <label class="f" style="flex:0 1 190px">תאריך<input type="date" id="evDate" required></label>
+          <button class="btn no-geo-only" id="evBtn2" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            יצירת אירוע וברקוד</button>
         </div>
         <div class="row geo">
           <label class="f">מיקום האולם<input id="evPlace" placeholder="הדבקת קישור מגוגל מפות" dir="auto"></label>
@@ -319,9 +359,6 @@
             יצירת אירוע וברקוד
           </button>
         </div>
-        <div class="row no-geo-only"><button class="btn" id="evBtn2" type="submit">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-            יצירת אירוע וברקוד</button></div>
         <p class="note geo">עם מיקום: עובדים יוכלו לסמן כניסה ויציאה רק בתוך הרדיוס מהאולם. בלי מיקום: המיקום רק נרשם. סימון אפשרי רק ביום האירוע וביום שאחריו.</p>
       </form>
 
@@ -387,7 +424,7 @@
           <label class="f" style="flex:0 1 280px"><input type="search" id="wSearch" placeholder="חיפוש לפי שם, ת״ז או טלפון" aria-label="חיפוש עובד"></label>
         </div>
         <p class="note">אפשר לשנות מחלקה ולקבוע תעריף אישי. תעריף אישי ריק = תעריף המחלקה. השינוי חל על משמרות שייסגרו מעכשיו.</p>
-        <div class="tbl"><table>
+        <div class="tbl"><table class="stack">
           <thead><tr><th>שם</th><th>ת"ז</th><th>טלפון</th><th>מחלקה</th><th>תעריף אישי</th><th class="num">בפועל</th><th>נרשם</th><th></th></tr></thead>
           <tbody id="wRows"></tbody>
         </table></div>
@@ -447,7 +484,7 @@
   let GEO = false, PW = '', DEPTS = [], EVENTS = [], WORKERS = [], POLICY = [], lastFilter = null;
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const money = n => '₪' + Number(n || 0).toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const money = n => { n = Number(n || 0); return '₪' + n.toLocaleString('he-IL', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 }); };
   const hrs = n => Number(n || 0).toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const dept = d => '<span class="dept" style="--dc:' + dc(d) + '">' + esc(d) + '</span>';
   const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -552,6 +589,7 @@
           (!GEO ? '' : e.lat != null ? '<a class="tag ok" href="https://maps.google.com/?q=' + e.lat + ',' + e.lng + '" target="_blank" rel="noopener">' + I.pin + 'מיקום · ' + e.radius + ' מ׳</a>' : '<span class="tag warn">' + I.pin + 'בלי מיקום</span>') +
         '</span></div>' +
         '<div class="ev-act">' +
+          '<button class="btn sm ghost" data-editev="' + esc(e.code) + '" aria-label="עריכת ' + esc(e.name) + '">' + I.edit + 'עריכה</button>' +
           (GEO ? '<button class="btn sm ghost" data-place="' + esc(e.code) + '">' + I.pin + 'מיקום</button>' : '') +
           '<button class="btn sm ghost" data-qr="' + esc(e.code) + '">' + I.qr + 'ברקוד</button>' +
           '<button class="btn sm ghost" data-rep="' + esc(e.code) + '">' + I.rep + 'דוח</button>' +
@@ -564,12 +602,24 @@
   $('evRows').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.qr) { const ev = EVENTS.find(x => x.code === b.dataset.qr); showQr(ev.code, ev.name, ev.dateText); }
+    if (b.dataset.editev) {
+      const row = b.closest('.ev'), ev = EVENTS.find(x => x.code === b.dataset.editev);
+      const open = row.nextElementSibling && row.nextElementSibling.classList.contains('ev-edit');
+      document.querySelectorAll('.ev-place, .ev-edit').forEach(x => x.remove());
+      if (open) return;
+      row.insertAdjacentHTML('afterend', '<form class="ev-edit ev-panel row" data-code="' + esc(ev.code) + '">' +
+        '<label class="f">שם האירוע<input data-f="name" required maxlength="120" value="' + esc(ev.name) + '"></label>' +
+        '<label class="f" style="flex:0 1 190px">תאריך<input type="date" data-f="date" required value="' + esc(ev.date) + '"></label>' +
+        '<button class="btn sm">שמירה</button><button class="link" type="button" data-cancelev>ביטול</button></form>');
+      const inp = row.nextElementSibling.querySelector('[data-f=name]'); inp.focus(); inp.select();
+    }
+    if (b.dataset.cancelev !== undefined) { b.closest('.ev-edit').remove(); return; }
     if (b.dataset.place) {
       const row = b.closest('.ev'), ev = EVENTS.find(x => x.code === b.dataset.place);
       const open = row.nextElementSibling && row.nextElementSibling.classList.contains('ev-place');
-      document.querySelectorAll('.ev-place').forEach(x => x.remove());
+      document.querySelectorAll('.ev-place, .ev-edit').forEach(x => x.remove());
       if (open) return;
-      row.insertAdjacentHTML('afterend', '<form class="ev-place row" data-code="' + esc(ev.code) + '" style="padding:4px 8px 16px">' +
+      row.insertAdjacentHTML('afterend', '<form class="ev-place ev-panel row" data-code="' + esc(ev.code) + '">' +
         '<label class="f">מיקום האולם<input data-f="place" dir="auto" placeholder="הדבקת קישור מגוגל מפות" value="' + (ev.lat != null ? esc(ev.lat + ', ' + ev.lng) : '') + '"></label>' +
         '<button class="btn sm ghost" type="button" data-here>' + I.pin + 'המיקום שלי עכשיו</button>' +
         '<label class="f" style="flex:0 1 130px">רדיוס<span class="unit"><input class="sm" type="number" data-f="radius" min="50" max="5000" step="50" value="' + (ev.radius || 300) + '"><i>מטר</i></span></label>' +
@@ -605,7 +655,18 @@
     if (e.target.closest('[data-here]')) fillHere(f.querySelector('[data-f=place]'), e.target.closest('[data-here]'));
     if (e.target.closest('[data-noplace]')) savePlace(f, true);
   });
-  $('evRows').addEventListener('submit', e => { const f = e.target.closest('.ev-place'); if (f) { e.preventDefault(); savePlace(f, false); } });
+  $('evRows').addEventListener('submit', async e => {
+    const f = e.target.closest('.ev-place'); if (f) { e.preventDefault(); savePlace(f, false); return; }
+    const ed = e.target.closest('.ev-edit'); if (!ed) return;
+    e.preventDefault();
+    const btn = ed.querySelector('button:not([type])'); busy(btn, true);
+    try {
+      const r = await call('editEvent', ed.dataset.code, ed.querySelector('[data-f=name]').value, ed.querySelector('[data-f=date]').value);
+      ok('האירוע עודכן · ' + r.name + ' · ' + r.date);
+      if (qrData && qrData.code === r.code) { $('qrTitle').textContent = r.name + ' · ' + r.date; qrData.name = r.name; qrData.date = r.date; }
+      await loadEvents();
+    } catch (x) { err(x.message); busy(btn, false); }
+  });
   async function savePlace(f, clear) {
     const place = clear ? '' : f.querySelector('[data-f=place]').value.trim();
     if (!clear && !place) return err('מדביקים קישור או לוחצים "המיקום שלי עכשיו"');
@@ -677,17 +738,17 @@
       : s.paid >= s.pay && s.pay > 0 ? '<span class="tag ok">' + I.ok + 'שולם</span>'
       : s.paid > 0 ? '<span class="tag warn">שולם חלקית</span>' : '';
     return '<tr data-sid="' + esc(s.id) + '">' +
-      '<td class="strong">' + esc(s.name) + '</td><td>' + dept(s.dept) + '</td>' + (opts.event ? '<td>' + esc(s.event) + '</td>' : '') +
-      '<td data-c="in">' + esc(s.start) + '</td><td data-c="out">' + (closed ? esc(s.end) : '') + '</td>' +
-      '<td class="num">' + (s.hours == null ? '' : hrs(s.hours)) + '</td>' +
-      '<td class="num">' + (s.otHours ? hrs(s.otHours) : '') + '</td>' +
-      '<td class="num strong">' + (s.pay == null ? '' : money(s.pay)) + '</td>' +
-      '<td>' + status + '</td><td>' + locLinks(s.note) + '</td>' +
-      '<td><div class="acts"><button class="btn sm ghost" data-edit="' + esc(s.id) + '" aria-label="עריכת משמרת של ' + esc(s.name) + '">' + I.edit + (closed ? 'עריכה' : 'סגירה') + '</button></div></td></tr>';
+      '<td class="strong k">' + esc(s.name) + '</td><td class="m">' + dept(s.dept) + '</td>' + (opts.event ? '<td class="m">' + esc(s.event) + '</td>' : '') +
+      '<td class="m" data-c="in" data-l="כניסה">' + esc(s.start) + '</td><td class="m" data-c="out" data-l="יציאה">' + (closed ? esc(s.end) : '') + '</td>' +
+      '<td class="num m" data-l="שעות">' + (s.hours == null ? '' : hrs(s.hours)) + '</td>' +
+      '<td class="num m" data-l="ש״נ">' + (s.otHours ? hrs(s.otHours) : '') + '</td>' +
+      '<td class="num strong v">' + (s.pay == null ? '' : money(s.pay)) + '</td>' +
+      '<td class="m">' + status + '</td><td class="m">' + locLinks(s.note) + '</td>' +
+      '<td class="a"><div class="acts"><button class="btn sm ghost" data-edit="' + esc(s.id) + '" aria-label="עריכת משמרת של ' + esc(s.name) + '">' + I.edit + (closed ? 'עריכה' : 'סגירה') + '</button></div></td></tr>';
   }
   function shiftTable(list, opts) {
     list.forEach(s => SHIFTS[s.id] = s);
-    return '<div class="tbl"><table><thead><tr><th>עובד</th><th>מחלקה</th>' + (opts.event ? '<th>אירוע</th>' : '') +
+    return '<div class="tbl"><table class="stack"><thead><tr><th>עובד</th><th>מחלקה</th>' + (opts.event ? '<th>אירוע</th>' : '') +
       '<th>כניסה</th><th>יציאה</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th>מצב</th><th>מיקום</th><th></th></tr></thead><tbody>' +
       list.map(s => shiftRow(s, opts)).join('') + '</tbody></table></div>';
   }
@@ -753,15 +814,15 @@
         '<span class="v' + (t.due <= 0 ? ' zero' : '') + '">' + money(Math.abs(t.due)) + '</span>' +
         '<span class="s">מתוך ' + money(t.pay) + ' · ' + hrs(t.hours) + ' שעות' + (t.otHours ? ' (' + hrs(t.otHours) + ' נוספות)' : '') + ' · ' + t.workers + ' עובדים</span></div>' +
       (t.pay > 0 ? '<div class="paidbar"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><div class="lbl"><span>שולם ' + money(t.paid) + '</span><span>' + pct + '%</span></div></div>' : '') +
-      '<div class="legend">' + depts.map(d => '<div class="' + (d.pay ? '' : 'zero') + '" style="--dc:' + dc(d.dept) + '"><span class="k">' + esc(d.dept) + '</span><span class="v">' + money(d.pay) + '</span><span class="s">' + (d.due > 0 ? 'נשאר ' + money(d.due) + ' · ' : '') + hrs(d.hours) + ' שעות · ' + d.workers + ' עובדים</span></div>').join('') + '</div>' +
+      '<div class="legend">' + depts.filter(d => lastFilter.dept || d.workers || d.pay).map(d => '<div class="' + (d.pay ? '' : 'zero') + '" style="--dc:' + dc(d.dept) + '"><span class="k">' + esc(d.dept) + '</span><span class="v">' + money(d.pay) + '</span><span class="s">' + (d.due > 0 ? 'נשאר ' + money(d.due) + ' · ' : '') + hrs(d.hours) + ' שעות · ' + d.workers + ' עובדים</span></div>').join('') + '</div>' +
       '</div>';
     h += '<div class="card"><div class="head"><h2>לפי עובד</h2><div class="acts no-print"><button class="btn ghost" id="printRep">' + I.print + 'הדפסה</button><button class="btn ghost" id="exportBtn"' + (r.workers.length ? '' : ' disabled') + '>' + I.sheet + 'ייצוא לגיליון</button></div></div>';
-    h += r.workers.length ? '<div class="tbl"><table><thead><tr><th>שם</th><th>מחלקה</th><th>טלפון</th><th class="num">משמרות</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th class="num">שולם</th><th class="num">נשאר</th><th></th></tr></thead><tbody>' +
-      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong">' + esc(w.name) + '</td><td>' + dept(w.dept) + '</td><td class="ltr">' + esc(w.phone) + '</td>' +
-        '<td class="num">' + w.shifts + '</td><td class="num">' + hrs(w.hours) + '</td><td class="num">' + (w.otHours ? hrs(w.otHours) : '') + '</td>' +
-        '<td class="num strong">' + money(w.pay) + '</td><td class="num">' + (w.paid ? money(w.paid) : '') + '</td>' +
-        '<td class="num ' + (w.due > 0 ? 'due' : '') + '">' + (w.due > 0 ? money(w.due) : w.due < 0 ? '<span class="tag err">ביתר ' + money(-w.due) + '</span>' : '') + '</td>' +
-        '<td><div class="acts">' + (w.due > 0
+    h += r.workers.length ? '<div class="tbl"><table class="stack"><thead><tr><th>שם</th><th>מחלקה</th><th>טלפון</th><th class="num">משמרות</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th class="num">שולם</th><th class="num">נשאר</th><th></th></tr></thead><tbody>' +
+      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong k">' + esc(w.name) + '</td><td class="m">' + dept(w.dept) + '</td><td class="ltr m">' + esc(w.phone) + '</td>' +
+        '<td class="num m" data-l="משמרות">' + w.shifts + '</td><td class="num m" data-l="שעות">' + hrs(w.hours) + '</td><td class="num m" data-l="ש״נ">' + (w.otHours ? hrs(w.otHours) : '') + '</td>' +
+        '<td class="num strong m" data-l="לתשלום">' + money(w.pay) + '</td><td class="num m" data-l="שולם">' + (w.paid ? money(w.paid) : '') + '</td>' +
+        '<td class="num v ' + (w.due > 0 ? 'due' : '') + '">' + (w.due > 0 ? money(w.due) : w.due < 0 ? '<span class="tag err">ביתר ' + money(-w.due) + '</span>' : '') + '</td>' +
+        '<td class="a"><div class="acts">' + (w.due > 0
           ? '<button class="btn sm good" data-pay="' + esc(w.id) + '" data-amt="' + w.due + '" data-name="' + esc(w.name) + '">' + I.coin + 'סימון כשולם</button>'
           : '<span class="tag ok">' + I.ok + 'שולם</span><button class="link" data-unpay="' + esc(w.id) + '" data-name="' + esc(w.name) + '">ביטול</button>') +
         '</div></td></tr>').join('') +
@@ -815,11 +876,11 @@
     const q = $('wSearch').value.trim().toLowerCase();
     const list = q ? WORKERS.filter(w => (w.name + ' ' + w.tz + ' ' + w.phone).toLowerCase().includes(q)) : WORKERS;
     $('wCount').textContent = WORKERS.length ? '· ' + WORKERS.length : '';
-    $('wRows').innerHTML = list.length ? list.map(w => '<tr data-wid="' + esc(w.id) + '"><td class="strong">' + esc(w.name) + '</td><td>' + esc(w.tz) + '</td><td class="ltr">' + esc(w.phone) + '</td>' +
-      '<td><select class="sm" data-f="dept" aria-label="מחלקה של ' + esc(w.name) + '">' + DEPTS.map(d => '<option' + (d === w.dept ? ' selected' : '') + '>' + esc(d) + '</option>').join('') + '</select></td>' +
-      '<td><span class="unit" style="width:130px"><input class="sm" type="number" min="0" step="1" data-f="rate" value="' + esc(w.personalRate) + '" placeholder="לפי מחלקה" aria-label="תעריף אישי של ' + esc(w.name) + '"><i>₪</i></span></td>' +
-      '<td class="num">' + money(w.rate) + ' <span class="muted-s">' + (w.flat ? 'לאירוע' : 'לשעה') + '</span></td><td>' + esc(w.since) + '</td>' +
-      '<td><div class="acts"><button class="btn sm" data-wsave hidden>שמירה</button></div></td></tr>').join('')
+    $('wRows').innerHTML = list.length ? list.map(w => '<tr data-wid="' + esc(w.id) + '"><td class="strong k">' + esc(w.name) + '</td><td class="m" data-l="ת״ז">' + esc(w.tz) + '</td><td class="ltr m">' + esc(w.phone) + '</td><td class="br"></td>' +
+      '<td class="m"><select class="sm" data-f="dept" aria-label="מחלקה של ' + esc(w.name) + '">' + DEPTS.map(d => '<option' + (d === w.dept ? ' selected' : '') + '>' + esc(d) + '</option>').join('') + '</select></td>' +
+      '<td class="m"><span class="unit" style="width:130px"><input class="sm" type="number" min="0" step="1" data-f="rate" value="' + esc(w.personalRate) + '" placeholder="לפי מחלקה" aria-label="תעריף אישי של ' + esc(w.name) + '"><i>₪</i></span></td>' +
+      '<td class="num v">' + money(w.rate) + ' <span class="muted-s">' + (w.flat ? 'לאירוע' : 'לשעה') + '</span></td><td class="m" data-l="נרשם">' + esc(w.since) + '</td>' +
+      '<td class="a"><div class="acts"><button class="btn sm" data-wsave hidden>שמירה</button></div></td></tr>').join('')
       : '<tr><td colspan="8">' + (WORKERS.length ? empty('people', 'אין התאמה לחיפוש', '') : empty('people', 'עדיין אין עובדים רשומים', 'הם יופיעו כאן אחרי הסריקה הראשונה שלהם באירוע.')) + '</td></tr>';
   }
   $('wSearch').addEventListener('input', drawWorkers);
