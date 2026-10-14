@@ -173,6 +173,12 @@
   .ev-name { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ev-meta { display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 14px; font-weight: 600; }
   .code { font-weight: 800; letter-spacing: .08em; color: var(--ink); direction: ltr; unicode-bidi: isolate; }
+  .evfilter { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .evfilter .seg { grid-template-columns: repeat(3, auto); }
+  .evfilter .seg span { padding: 7px 14px; font-size: 14px; }
+  .evfilter .seg i { font-style: normal; font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .evfilter input[type=search] { width: 220px; padding: 8px 12px; font-size: 15px; }
+  @media (max-width: 640px) { .evfilter, .evfilter .seg { width: 100%; } .evfilter .seg { grid-template-columns: repeat(3, 1fr); } .evfilter input[type=search] { width: 100%; } }
   .ev-act { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .ev-panel { padding: 14px 16px 16px; margin: 0 8px 10px; margin-inline-start: 82px; background: var(--surface-2); border-radius: 12px; }
   .ev-panel input { background: var(--surface); }
@@ -384,7 +390,17 @@
       </div>
 
       <div class="card">
-        <h2>האירועים שלי</h2>
+        <div class="head">
+          <h2>האירועים שלי</h2>
+          <div class="evfilter">
+            <div class="seg" role="radiogroup" aria-label="אילו אירועים להציג" id="evWhen">
+              <label><input type="radio" name="evWhen" value="next" checked><span>הבאים <i id="cNext"></i></span></label>
+              <label><input type="radio" name="evWhen" value="past"><span>שהיו <i id="cPast"></i></span></label>
+              <label><input type="radio" name="evWhen" value="all"><span>הכל <i id="cAll"></i></span></label>
+            </div>
+            <input type="search" id="evSearch" placeholder="חיפוש לפי שם או קוד" aria-label="חיפוש אירוע">
+          </div>
+        </div>
         <div class="events" id="evRows"></div>
       </div>
     </section>
@@ -576,9 +592,27 @@
     if (!EVENTS.length) $('evRows').innerHTML = [1, 2, 3].map(() => '<div class="ev"><div class="date" style="height:52px"></div><div class="ev-main"><span class="sk" style="width:40%;height:16px"></span><span class="sk" style="width:25%"></span></div></div>').join('');
     try {
       EVENTS = await call('listEvents');
-      const t = today();
       setOpenCount(EVENTS.reduce((s, e) => s + (e.open || 0), 0));
-      $('evRows').innerHTML = EVENTS.length ? EVENTS.map(e =>
+      drawEvents();
+      fillEventSelects();
+    } catch (x) { err(x.message); }
+  }
+  /* סינון: הבאים (היום והלאה, הקרוב ראשון) · שהיו (האחרון ראשון) · הכל. + חיפוש לפי שם או קוד */
+  function drawEvents() {
+    const t = today();
+    const when = (document.querySelector('input[name=evWhen]:checked') || {}).value || 'next';
+    const q = $('evSearch').value.trim().toLowerCase();
+    const match = e => !q || (e.name + ' ' + e.code).toLowerCase().includes(q);
+    const next = EVENTS.filter(e => e.date >= t), past = EVENTS.filter(e => e.date < t);
+    $('cNext').textContent = next.length; $('cPast').textContent = past.length; $('cAll').textContent = EVENTS.length;
+    let list = when === 'next' ? next.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
+      : (when === 'past' ? past : EVENTS).slice().sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+    list = list.filter(match);
+    const none = !EVENTS.length ? empty('cal', 'עדיין אין אירועים', 'יוצרים את הראשון למעלה, ומדפיסים את הברקוד לכניסת הצוות.')
+      : q ? empty('cal', 'אין אירוע שמתאים לחיפוש', '')
+      : when === 'next' ? empty('cal', 'אין אירועים קרובים', past.length ? 'האירועים הקודמים נמצאים ב"שהיו".' : '')
+      : empty('cal', 'עוד לא היו אירועים', '');
+    $('evRows').innerHTML = list.length ? list.map(e =>
         '<div class="ev' + (e.date === t ? ' is-today' : '') + '">' + dateTile(e.dateText) +
         '<div class="ev-main"><span class="ev-name">' + esc(e.name) + '</span>' +
           '<span class="ev-meta">' + (e.date === t ? '<span class="tag today">היום</span>' : '') +
@@ -595,10 +629,11 @@
           '<button class="btn sm ghost" data-rep="' + esc(e.code) + '">' + I.rep + 'דוח</button>' +
           '<button class="btn sm ghost" data-act="' + esc(e.code) + '" data-v="' + (!e.active) + '">' + (e.active ? I.lock + 'סגירה' : I.open + 'פתיחה') + '</button>' +
         '</div></div>').join('')
-        : empty('cal', 'עדיין אין אירועים', 'יוצרים את הראשון למעלה, ומדפיסים את הברקוד לכניסת הצוות.');
-      fillEventSelects();
-    } catch (x) { err(x.message); }
+        : none;
   }
+  try { const w = localStorage.getItem('sc_evWhen'); if (w) document.querySelector('input[name=evWhen][value=' + w + ']').checked = true; } catch (e) {}
+  $('evWhen').addEventListener('change', e => { try { localStorage.setItem('sc_evWhen', e.target.value); } catch (x) {} drawEvents(); });
+  $('evSearch').addEventListener('input', drawEvents);
   $('evRows').addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b) return;
     if (b.dataset.qr) { const ev = EVENTS.find(x => x.code === b.dataset.qr); showQr(ev.code, ev.name, ev.dateText); }
