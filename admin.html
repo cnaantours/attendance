@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>ניהול נוכחות</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  /* לוח ניהול: מעטפת כהה בצבע העץ של מסך העובד, משטח עבודה בהיר. "נשאר לשלם" הוא הדבר הגדול ביותר בדוח. */
+  :root {
+    --ground: #F5F2EC; --surface: #FFFFFF; --surface-2: #EEE9E1; --surface-3: #E3DCD1; --line: #E6E0D6;
+    --ink: #1C1916; --muted: #675F55; --faint: #8F877C;
+    --shell: #1A1714; --shell-2: #2A2420; --shell-ink: #F5EEE3; --shell-muted: #B8AC9C;
+    --gold: #8A6A2F; --gold-hi: #D8B26E; --gold-ink: #1A1408;
+    --act: #1C1916; --on-act: #F5F2EC;
+    --ok: #1F6E4C; --ok-bg: #E1F0E7; --warn: #7A5410; --warn-bg: #FBEFD5; --err: #9A2F1C; --err-bg: #FBE6E1;
+    --d1: #9B3F4B; --d2: #B47A1E; --d3: #2E7C77; --d4: #4C6890;
+    --r-surface: 16px; --r-field: 10px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --f-display: 'Frank Ruhl Libre', 'Times New Roman', serif;
+    --f-ui: 'Assistant', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+    accent-color: var(--gold);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #121010; --surface: #1C1916; --surface-2: #26211D; --surface-3: #332C27; --line: #2E2824;
+      --ink: #F2EBE0; --muted: #ADA295; --faint: #857B70;
+      --shell: #0C0B0A; --shell-2: #1E1A17;
+      --gold: #D8B26E;
+      --act: #D8B26E; --on-act: #1A1408;
+      --ok: #7FD3A6; --ok-bg: #173226; --warn: #F1D08A; --warn-bg: #362B14; --err: #F7B9AA; --err-bg: #3A1D17;
+      --d1: #D47884; --d2: #E0A64A; --d3: #5DB8B1; --d4: #8EA6CF;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 400 16px/1.5 var(--f-ui); -webkit-font-smoothing: antialiased; caret-color: var(--gold); }
+  ::selection { background: var(--gold-hi); color: var(--gold-ink); }
+  * { scrollbar-width: thin; scrollbar-color: var(--surface-3) transparent; }
+
+  /* מעטפת */
+  .shell { background: var(--shell); color: var(--shell-ink); position: sticky; top: 0; z-index: 5; }
+  .shell-in { max-width: 1180px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
+  .top { display: flex; align-items: center; gap: 12px; padding-block: 16px 4px; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 24px; height: 24px; color: var(--gold-hi); }
+  .brand h1 { margin: 0; font: 700 1.5rem/1.2 var(--f-display); }
+  .ver { margin-inline-start: auto; color: var(--shell-muted); font-size: 13px; font-weight: 600; }
+  .signout { background: none; color: var(--shell-muted); padding: 8px 10px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-flex; gap: 6px; align-items: center; }
+  .signout:hover { color: var(--shell-ink); background: var(--shell-2); }
+  .signout svg { width: 18px; height: 18px; }
+  .tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin-inline: -4px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button {
+    flex: none; background: none; color: var(--shell-muted); padding: 14px 12px 12px; font-weight: 700; font-size: 16px;
+    border-bottom: 3px solid transparent; border-radius: 0; display: inline-flex; align-items: center; gap: 8px;
+    transition: color 160ms ease, border-color 160ms ease;
+  }
+  .tabs button:hover { color: var(--shell-ink); }
+  .tabs button[aria-selected=true] { color: var(--shell-ink); border-bottom-color: var(--gold-hi); }
+  .tabs .count { background: #8F3A26; color: #FFE9E2; font-size: 12px; font-weight: 800; padding: 1px 7px; border-radius: 99px; font-variant-numeric: tabular-nums; }
+
+  main { max-width: 1180px; margin: 0 auto; padding: 24px max(16px, env(safe-area-inset-right)) 96px max(16px, env(safe-area-inset-left)); display: grid; gap: 20px; }
+  section { display: grid; gap: 20px; min-width: 0; }
+  h2 { margin: 0; font: 700 1.25rem/1.3 var(--f-display); }
+  h3 { margin: 0; font: 800 1.0625rem/1.3 var(--f-ui); }
+  .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .note { margin: 0; color: var(--muted); font-size: 15px; max-width: 75ch; }
+  .card { background: var(--surface); border-radius: var(--r-surface); padding: 20px; display: grid; gap: 16px; min-width: 0; }
+  @media (prefers-color-scheme: light) { .card { box-shadow: 0 0 0 1px var(--line); } }
+
+  /* שדות וכפתורים */
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  .row > label { flex: 1 1 180px; }
+  label.f { display: grid; gap: 6px; font-size: 14px; font-weight: 700; color: var(--muted); }
+  input, select {
+    font: inherit; font-size: 16px; padding: 10px 12px; border-radius: var(--r-field); min-width: 0; width: 100%;
+    border: 1px solid var(--surface-3); background: var(--ground); color: var(--ink);
+    transition: border-color 160ms ease;
+  }
+  input:hover, select:hover { border-color: var(--faint); }
+  input:focus, select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 22%, transparent); }
+  input.sm, select.sm { padding: 6px 8px; font-size: 15px; }
+  input[type=number] { font-variant-numeric: tabular-nums; }
+  .unit { position: relative; display: block; }
+  .unit input { padding-inline-end: 52px; }
+  .unit i { position: absolute; inset-inline-end: 12px; top: 50%; transform: translateY(-50%); font-style: normal; color: var(--faint); font-size: 14px; font-weight: 700; pointer-events: none; }
+  button { font: inherit; cursor: pointer; border: 0; color: inherit; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;
+    background: var(--act); color: var(--on-act); padding: 11px 18px; border-radius: var(--r-field); font-weight: 700; font-size: 16px;
+    transition: transform 120ms var(--ease-out), filter 160ms ease, background-color 160ms ease;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn:active { transform: scale(.97); }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn.ghost { background: var(--surface-2); color: var(--ink); }
+  .btn.ghost:hover { background: var(--surface-3); filter: none; }
+  .btn.good { background: var(--ok); color: #fff; }
+  @media (prefers-color-scheme: dark) { .btn.good { color: #0E2219; } }
+  .btn.danger { background: var(--err-bg); color: var(--err); }
+  .btn.danger.armed { background: var(--err); color: #fff; }
+  .btn.sm { padding: 6px 12px; font-size: 14px; }
+  .btn.sm svg { width: 16px; height: 16px; }
+  .link { background: none; color: var(--muted); font-weight: 700; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; padding: 4px; }
+  .link:hover { color: var(--ink); }
+  button[disabled] { opacity: .55; cursor: progress; }
+  @media (max-width: 560px) { form .row > .btn { flex: 1 1 100%; } }
+
+  /* תגיות */
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; }
+  .tag svg { width: 14px; height: 14px; }
+  .tag.ok { background: var(--ok-bg); color: var(--ok); }
+  .tag.off { background: var(--surface-2); color: var(--muted); }
+  .tag.warn { background: var(--warn-bg); color: var(--warn); }
+  .tag.err { background: var(--err-bg); color: var(--err); }
+  .tag.today { background: var(--gold-hi); color: var(--gold-ink); }
+  .dept { display: inline-flex; align-items: center; gap: 8px; }
+  .dept::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--dc, var(--faint)); flex: none; }
+
+  /* אירועים */
+  .events { display: grid; gap: 2px; }
+  .ev { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; padding: 12px 8px; border-radius: 12px; }
+  .ev + .ev { box-shadow: 0 -1px 0 var(--line); }
+  .ev:hover { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+  .date { width: 58px; text-align: center; background: var(--surface-2); border-radius: 10px; padding: 6px 0 5px; line-height: 1; }
+  .date b { display: block; font: 700 1.625rem/1 var(--f-display); font-variant-numeric: tabular-nums; }
+  .date span { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-top: 3px; }
+  .ev.is-today .date { background: var(--shell); color: var(--shell-ink); }
+  .ev.is-today .date span { color: var(--gold-hi); }
+  .ev-main { display: grid; gap: 3px; min-width: 0; }
+  .ev-name { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ev-meta { display: flex; gap: 8px 12px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 14px; font-weight: 600; }
+  .code { font-weight: 800; letter-spacing: .08em; color: var(--ink); direction: ltr; unicode-bidi: isolate; }
+  .ev-act { display: flex; gap: 6px; flex-wrap: wrap; }
+  @media (max-width: 760px) { .ev { grid-template-columns: auto 1fr; } .ev-act { grid-column: 1 / -1; } .ev-act .btn { flex: 1; } }
+
+  /* ברקוד */
+  .qr-panel { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+  #qr { background: #fff; padding: 14px; border-radius: 12px; line-height: 0; box-shadow: 0 0 0 1px var(--line); }
+  #qr img, #qr canvas { width: 184px; height: 184px; }
+  .qr-info { display: grid; gap: 10px; min-width: 0; }
+  .qr-info h3 { font: 700 1.375rem/1.25 var(--f-display); }
+  .qr-code { font: 800 2rem/1 var(--f-ui); letter-spacing: .14em; direction: ltr; text-align: right; }
+  .url { font-size: 13px; color: var(--muted); word-break: break-all; direction: ltr; text-align: right; }
+  @media (max-width: 560px) { .qr-panel { grid-template-columns: 1fr; justify-items: center; text-align: center; } .qr-code, .url { text-align: center; } }
+
+  /* דוח: "נשאר לשלם" הוא הכותרת */
+  .total { display: grid; gap: 18px; }
+  .total-num { display: flex; align-items: baseline; gap: 6px 18px; flex-wrap: wrap; }
+  .total-num .k { width: 100%; font-weight: 800; color: var(--muted); font-size: 15px; }
+  .total-num .v { font: 700 3.25rem/1 var(--f-display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .total-num .v.zero { color: var(--ok); }
+  .total-num .s { color: var(--muted); font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .paidbar { display: grid; gap: 6px; }
+  .paidbar .track { height: 10px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+  .paidbar .fill { height: 100%; background: var(--ok); border-radius: 99px; transform-origin: right; animation: grow 420ms var(--ease-out) both; }
+  .paidbar .lbl { display: flex; justify-content: space-between; font-size: 14px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+  @keyframes grow { from { transform: scaleX(0); } }
+  .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px 20px; }
+  .legend > div { display: grid; gap: 1px; padding: 10px 0 0; border-top: 3px solid var(--dc); }
+  .legend .k { font-weight: 800; font-size: 15px; }
+  .legend .v { font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .legend .s { color: var(--muted); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .legend .zero { opacity: .5; }
+
+  /* טבלאות */
+  .tbl { overflow-x: auto; margin-inline: -20px; padding-inline: 20px; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 10px 12px; white-space: nowrap; vertical-align: middle; }
+  td { border-top: 1px solid var(--line); }
+  th { font-size: 13px; color: var(--muted); font-weight: 700; padding-top: 0; }
+  td.num, th.num { text-align: left; }
+  td.strong { font-weight: 800; }
+  td.due { color: var(--err); font-weight: 800; }
+  tbody tr:hover td { background: color-mix(in srgb, var(--surface-2) 50%, transparent); }
+  tr.editing td { background: color-mix(in srgb, var(--gold-hi) 12%, transparent) !important; }
+  tr.is-paid td:not(:last-child) { color: var(--muted); }
+  tfoot td { font-weight: 800; border-top: 2px solid var(--ink); }
+  .ltr { direction: ltr; unicode-bidi: isolate; }
+  .acts { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+  a.map { color: var(--gold); font-weight: 700; text-underline-offset: 3px; margin-inline-end: 8px; }
+  .muted-s { color: var(--faint); font-size: 14px; }
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .filters label.f { flex: 0 1 260px; }
+  .check { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: var(--muted); padding-bottom: 10px; cursor: pointer; }
+  .check input { width: 18px; height: 18px; }
+
+  /* הגדרות */
+  .policies { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; }
+  .pol { border-top: 4px solid var(--dc); }
+  .pol .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pol .grid .wide { grid-column: 1 / -1; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); border-radius: var(--r-field); padding: 3px; gap: 3px; }
+  .seg label { position: relative; }
+  .seg input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .seg span { display: block; text-align: center; padding: 8px 6px; border-radius: 8px; font-weight: 800; font-size: 15px; color: var(--muted); transition: background-color 160ms ease, color 160ms ease; }
+  .seg input:checked + span { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .seg input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .example { background: var(--surface-2); border-radius: var(--r-field); padding: 10px 12px; font-size: 15px; font-weight: 600; color: var(--muted); }
+  .example b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .savebar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* מצבים */
+  .empty { padding: 36px 16px; text-align: center; color: var(--muted); display: grid; gap: 6px; justify-items: center; }
+  .empty svg { width: 36px; height: 36px; color: var(--faint); }
+  .empty b { color: var(--ink); font-size: 17px; }
+  .sk { display: block; height: 14px; border-radius: 7px; background: var(--surface-2); animation: breathe 1.4s ease-in-out infinite; }
+  @keyframes breathe { 50% { opacity: .5; } }
+  .banner { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-radius: 12px; font-weight: 700; background: var(--warn-bg); color: var(--warn); }
+  .banner svg { width: 20px; height: 20px; flex: none; }
+  .banner button { margin-inline-start: auto; background: none; color: inherit; text-decoration: underline; text-underline-offset: 3px; font-weight: 800; }
+
+  /* טוסט */
+  .toasts { position: fixed; inset: auto 0 max(18px, env(safe-area-inset-bottom)); display: grid; justify-items: center; gap: 8px; pointer-events: none; z-index: 10; padding-inline: 16px; }
+  .toast {
+    pointer-events: auto; display: flex; align-items: center; gap: 10px; max-width: 560px;
+    padding: 12px 16px; border-radius: 12px; font-weight: 700; background: var(--shell); color: var(--shell-ink);
+    box-shadow: 0 10px 30px -8px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.15);
+    animation: toast-in 240ms var(--ease-out);
+  }
+  .toast svg { width: 20px; height: 20px; flex: none; }
+  .toast.ok svg { color: #7FD3A6; }
+  .toast.err { background: #8F2B1A; color: #FFF1EC; }
+  .toast a { color: var(--gold-hi); font-weight: 800; }
+  .toast button { background: none; color: inherit; opacity: .7; padding: 2px 4px; margin-inline-start: 4px; font-size: 18px; line-height: 1; }
+  .toast.leave { animation: toast-out 180ms ease forwards; }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+  @keyframes toast-out { to { opacity: 0; transform: translateY(8px); } }
+
+  /* כניסה */
+  .login-page { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; background: var(--shell); color: var(--shell-ink); }
+  .login { width: 100%; max-width: 380px; display: grid; gap: 18px; }
+  .login .brand { justify-content: center; margin-bottom: 8px; }
+  .login .brand h1 { font-size: 1.875rem; }
+  .login label.f { color: var(--shell-muted); }
+  .login input { background: var(--shell-2); border-color: #3A322C; color: var(--shell-ink); font-size: 18px; padding: 13px 14px; }
+  .login input:focus { border-color: var(--gold-hi); }
+  .login .btn { background: var(--gold-hi); color: var(--gold-ink); padding: 14px; font-size: 17px; }
+  .login .err { color: #F7B9AA; font-weight: 700; text-align: center; margin: 0; }
+
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+  }
+  @media print {
+    .shell, .filters, #repForm, .toasts, .acts, .no-print { display: none !important; }
+    body { background: #fff; }
+    .card { box-shadow: none !important; padding: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- כניסה -->
+<div class="login-page" id="loginBox">
+  <form class="login" id="loginForm">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5M12 2.5V5"/></svg>
+      <h1>ניהול נוכחות</h1>
+    </div>
+    <label class="f">סיסמת מנהל<input type="password" id="pw" required autocomplete="current-password" autofocus></label>
+    <button class="btn" id="loginBtn">כניסה</button>
+    <p class="err" id="loginErr" role="alert" hidden></p>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header class="shell">
+    <div class="shell-in">
+      <div class="top">
+        <div class="brand">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5M12 2.5V5"/></svg>
+          <h1>ניהול נוכחות</h1>
+        </div>
+        <span class="ver" id="ver"></span>
+        <button class="signout" id="signout">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M21 12H10M17 8l4 4-4 4"/></svg>
+          יציאה
+        </button>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="אזורי ניהול">
+        <button role="tab" data-tab="events" aria-selected="true">אירועים</button>
+        <button role="tab" data-tab="report" aria-selected="false">דוח ותשלומים</button>
+        <button role="tab" data-tab="shifts" aria-selected="false">משמרות <span class="count" id="openCount" hidden></span></button>
+        <button role="tab" data-tab="workers" aria-selected="false">עובדים</button>
+        <button role="tab" data-tab="settings" aria-selected="false">הגדרות תשלום</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- אירועים -->
+    <section id="tab-events" role="tabpanel">
+      <form class="card" id="newEvent">
+        <h2>אירוע חדש</h2>
+        <div class="row">
+          <label class="f">שם האירוע<input id="evName" required placeholder="חתונת דנה ויואב · אולם הגפן"></label>
+          <label class="f" style="flex:0 1 190px">תאריך<input type="date" id="evDate" required></label>
+        </div>
+        <div class="row">
+          <label class="f">מיקום האולם<input id="evPlace" placeholder="הדבקת קישור מגוגל מפות" dir="auto"></label>
+          <button class="btn ghost" type="button" id="evHere">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            המיקום שלי עכשיו
+          </button>
+          <label class="f" style="flex:0 1 140px">רדיוס<span class="unit"><input type="number" id="evRadius" min="50" max="5000" step="50" value="300"><i>מטר</i></span></label>
+          <button class="btn" id="evBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            יצירת אירוע וברקוד
+          </button>
+        </div>
+        <p class="note">עם מיקום: עובדים יוכלו לסמן כניסה ויציאה רק בתוך הרדיוס מהאולם. בלי מיקום: המיקום רק נרשם. סימון אפשרי רק ביום האירוע וביום שאחריו.</p>
+      </form>
+
+      <div class="card" id="qrCard" hidden>
+        <div class="qr-panel">
+          <div id="qr" aria-label="ברקוד לסריקה"></div>
+          <div class="qr-info">
+            <h3 id="qrTitle"></h3>
+            <div class="qr-code" id="qrCode"></div>
+            <div class="url" id="qrUrl"></div>
+            <div class="row">
+              <button class="btn" id="printQr">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/></svg>
+                הדפסת דף לתלייה
+              </button>
+              <button class="btn ghost" id="copyUrl">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+                העתקת קישור
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>האירועים שלי</h2>
+        <div class="events" id="evRows"></div>
+      </div>
+    </section>
+
+    <!-- דוח ותשלומים -->
+    <section id="tab-report" role="tabpanel" hidden>
+      <form class="card" id="repForm">
+        <div class="row">
+          <label class="f">אירוע<select id="fEvent"><option value="">כל האירועים</option></select></label>
+          <label class="f" style="flex:0 1 170px">מתאריך<input type="date" id="fFrom"></label>
+          <label class="f" style="flex:0 1 170px">עד תאריך<input type="date" id="fTo"></label>
+          <label class="f" style="flex:0 1 170px">מחלקה<select id="fDept"><option value="">כל המחלקות</option></select></label>
+          <button class="btn" id="repBtn">הצגת דוח</button>
+        </div>
+      </form>
+      <div id="repOut" style="display:grid;gap:20px"></div>
+    </section>
+
+    <!-- משמרות -->
+    <section id="tab-shifts" role="tabpanel" hidden>
+      <div class="card">
+        <div class="head"><h2>משמרות</h2></div>
+        <p class="note">עריכת שעות כניסה ויציאה, סגירת משמרת שנשכחה פתוחה, ומחיקת רישום שגוי. התשלום מחושב מחדש אוטומטית.</p>
+        <div class="filters">
+          <label class="f">אירוע<select id="sEvent"><option value="">כל האירועים</option></select></label>
+          <label class="check"><input type="checkbox" id="sOpenOnly"> רק משמרות פתוחות</label>
+        </div>
+        <div id="shiftsOut"></div>
+      </div>
+    </section>
+
+    <!-- עובדים -->
+    <section id="tab-workers" role="tabpanel" hidden>
+      <div class="card">
+        <div class="head">
+          <h2>עובדים רשומים <span class="note" id="wCount" style="font:600 15px var(--f-ui);display:inline"></span></h2>
+          <label class="f" style="flex:0 1 280px"><input type="search" id="wSearch" placeholder="חיפוש לפי שם, ת״ז או טלפון" aria-label="חיפוש עובד"></label>
+        </div>
+        <p class="note">אפשר לשנות מחלקה ולקבוע תעריף אישי. תעריף אישי ריק = תעריף המחלקה. השינוי חל על משמרות שייסגרו מעכשיו.</p>
+        <div class="tbl"><table>
+          <thead><tr><th>שם</th><th>ת"ז</th><th>טלפון</th><th>מחלקה</th><th>תעריף אישי</th><th class="num">בפועל</th><th>נרשם</th><th></th></tr></thead>
+          <tbody id="wRows"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- הגדרות -->
+    <section id="tab-settings" role="tabpanel" hidden>
+      <form class="card" id="setForm">
+        <div class="head"><h2>תשלום לפי מחלקה</h2></div>
+        <p class="note">שעתי: תעריף × שעות. גלובלי: סכום קבוע פעם אחת לאירוע. שעות נוספות נספרות על סך השעות של העובד באותו אירוע, וכל שעה מעבר לסף מוסיפה את התוספת (חצי שעה = חצי תוספת). השינוי חל על משמרות שייסגרו מעכשיו.</p>
+        <div class="policies" id="policies"></div>
+        <div class="savebar">
+          <span class="note" id="setStatus"></span>
+          <button class="btn" id="setBtn">שמירת הגדרות</button>
+        </div>
+      </form>
+      <form class="card" id="pwForm" autocomplete="off">
+        <h2>סיסמת מנהל</h2>
+        <div class="row">
+          <label class="f">סיסמה חדשה<input type="password" id="pw1" minlength="6" autocomplete="new-password" required></label>
+          <label class="f">שוב, לאימות<input type="password" id="pw2" minlength="6" autocomplete="new-password" required></label>
+          <button class="btn ghost" id="pwBtn">החלפת סיסמה</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+  const SITE = new URL('./', location.href).href;
+  const $ = id => document.getElementById(id);
+  const DCOL = { 'מלצרים': 'var(--d1)', 'טבחים': 'var(--d2)', 'מנקים': 'var(--d3)', 'לוגיסטיקה': 'var(--d4)' };
+  const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+  const svg = (d, w) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (w || 1.75) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  const I = {
+    ok: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2),
+    err: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/>'),
+    qr: svg('<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><path d="M14 14h3v3M20 14v.01M14 20h.01M17 20h3v-3"/>'),
+    rep: svg('<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'),
+    lock: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+    open: svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>'),
+    cal: svg('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>', 1.5),
+    people: svg('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/>', 1.5),
+    check: svg('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/>', 1.5),
+    sheet: svg('<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 9v12"/>'),
+    edit: svg('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4"/>'),
+    trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
+    coin: svg('<circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5v1.5M12 16v1.5"/>'),
+    pin: svg('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+    print: svg('<path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/>')
+  };
+  let PW = '', DEPTS = [], EVENTS = [], WORKERS = [], POLICY = [], lastFilter = null;
+
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = n => '₪' + Number(n || 0).toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const hrs = n => Number(n || 0).toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const dept = d => '<span class="dept" style="--dc:' + (DCOL[d] || 'var(--faint)') + '">' + esc(d) + '</span>';
+  const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const today = () => ymd(new Date());
+  const empty = (icon, title, text) => '<div class="empty">' + I[icon] + '<b>' + esc(title) + '</b>' + (text ? '<span>' + esc(text) + '</span>' : '') + '</div>';
+  const skRows = (cols, n) => Array.from({ length: n || 3 }, () => '<tr>' + Array.from({ length: cols }, () => '<td><span class="sk" style="width:' + (50 + Math.random() * 40 | 0) + '%"></span></td>').join('') + '</tr>').join('');
+  const locLinks = note => {
+    const out = [];
+    String(note || '').replace(/(כניסה|יציאה): (https:\/\/maps\.google\.com\/\?q=[-\d.,]+)/g, (_, k, u) => out.push('<a class="map" href="' + esc(u) + '" target="_blank" rel="noopener">' + k + '</a>'));
+    return out.length ? out.join(' ') : (/אין מיקום/.test(note) ? '<span class="muted-s">אין</span>' : '');
+  };
+
+  const call = (fn, ...args) => window.api(fn, PW, ...args);
+
+  /* טוסטים */
+  let toastTimer;
+  function toast(kind, m, html) {
+    const box = $('toasts'); clearTimeout(toastTimer); box.innerHTML = '';
+    if (!m) return;
+    const t = document.createElement('div');
+    t.className = 'toast ' + kind; t.setAttribute('role', kind === 'err' ? 'alert' : 'status');
+    t.innerHTML = I[kind] + '<span></span>' + (html || '') + '<button aria-label="סגירה">×</button>';
+    t.querySelector('span').textContent = m;
+    t.querySelector('button').onclick = () => toast('', '');
+    box.appendChild(t);
+    toastTimer = setTimeout(() => { t.classList.add('leave'); setTimeout(() => t.remove(), 200); }, kind === 'err' ? 9000 : 5000);
+  }
+  const err = m => toast('err', m);
+  const ok = (m, html) => toast('ok', m, html);
+  function busy(b, on) { if (b) { b.disabled = on; b.setAttribute('aria-busy', on); } }
+
+  /* כפתור שדורש לחיצה שנייה לאישור (מחיקה) */
+  function armed(b, label) {
+    if (b.classList.contains('armed')) return true;
+    b.classList.add('armed'); const old = b.innerHTML; b.textContent = label || 'לחיצה נוספת לאישור';
+    setTimeout(() => { b.classList.remove('armed'); b.innerHTML = old; }, 3500);
+    return false;
+  }
+
+  /* כניסה */
+  try { PW = sessionStorage.getItem('sc_pw') || ''; } catch (e) {}
+  $('loginForm').addEventListener('submit', e => { e.preventDefault(); login($('pw').value); });
+  async function login(pw) {
+    PW = pw; busy($('loginBtn'), true); $('loginErr').hidden = true;
+    try {
+      const r = await call('adminLogin');
+      DEPTS = r.depts;
+      $('ver').textContent = 'גרסה ' + (r.version || '');
+      try { sessionStorage.setItem('sc_pw', pw); } catch (e) {}
+      $('loginBox').hidden = true; $('app').hidden = false;
+      $('fDept').innerHTML = '<option value="">כל המחלקות</option>' + DEPTS.map(d => '<option>' + esc(d) + '</option>').join('');
+      $('evDate').value = today();
+      loadEvents();
+    } catch (x) {
+      $('loginErr').textContent = x.message; $('loginErr').hidden = false; $('pw').select();
+      try { sessionStorage.removeItem('sc_pw'); } catch (e) {}
+    }
+    busy($('loginBtn'), false);
+  }
+  if (PW) login(PW);
+  $('signout').onclick = () => { try { sessionStorage.removeItem('sc_pw'); } catch (e) {} PW = ''; location.reload(); };
+
+  /* לשוניות */
+  const TABS = ['events', 'report', 'shifts', 'workers', 'settings'];
+  function openTab(name) {
+    document.querySelectorAll('[data-tab]').forEach(x => x.setAttribute('aria-selected', x.dataset.tab === name));
+    TABS.forEach(t => $('tab-' + t).hidden = t !== name);
+    toast('', '');
+    if (name === 'events') loadEvents();
+    if (name === 'shifts') loadShifts();
+    if (name === 'workers') loadWorkers();
+    if (name === 'settings') loadSettings();
+    window.scrollTo({ top: 0 });
+  }
+  document.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => openTab(b.dataset.tab));
+  function setOpenCount(n) { $('openCount').textContent = n; $('openCount').hidden = !n; }
+
+  /* ---------- אירועים ---------- */
+  function dateTile(dt) {
+    const p = String(dt || '').split('/');
+    return '<div class="date"><b>' + esc(+p[0] || '') + '</b><span>' + esc(MONTHS[+p[1] - 1] || '') + '</span></div>';
+  }
+  function fillEventSelects() {
+    const opts = '<option value="">כל האירועים</option>' + EVENTS.map(e => '<option value="' + esc(e.code) + '">' + esc(e.dateText + ' · ' + e.name) + '</option>').join('');
+    ['fEvent', 'sEvent'].forEach(id => { const cur = $(id).value; $(id).innerHTML = opts; $(id).value = cur; });
+  }
+  async function loadEvents() {
+    if (!EVENTS.length) $('evRows').innerHTML = [1, 2, 3].map(() => '<div class="ev"><div class="date" style="height:52px"></div><div class="ev-main"><span class="sk" style="width:40%;height:16px"></span><span class="sk" style="width:25%"></span></div></div>').join('');
+    try {
+      EVENTS = await call('listEvents');
+      const t = today();
+      setOpenCount(EVENTS.reduce((s, e) => s + (e.open || 0), 0));
+      $('evRows').innerHTML = EVENTS.length ? EVENTS.map(e =>
+        '<div class="ev' + (e.date === t ? ' is-today' : '') + '">' + dateTile(e.dateText) +
+        '<div class="ev-main"><span class="ev-name">' + esc(e.name) + '</span>' +
+          '<span class="ev-meta">' + (e.date === t ? '<span class="tag today">היום</span>' : '') +
+          '<span class="code">' + esc(e.code) + '</span>' +
+          '<span>' + e.workers + ' עובדים</span>' +
+          (e.open ? '<span class="tag warn">' + e.open + ' פתוחות</span>' : '') +
+          (e.active ? '<span class="tag ok">פתוח לסימון</span>' : '<span class="tag off">סגור</span>') +
+          (e.lat != null ? '<a class="tag ok" href="https://maps.google.com/?q=' + e.lat + ',' + e.lng + '" target="_blank" rel="noopener">' + I.pin + 'מיקום · ' + e.radius + ' מ׳</a>' : '<span class="tag warn">' + I.pin + 'בלי מיקום</span>') +
+        '</span></div>' +
+        '<div class="ev-act">' +
+          '<button class="btn sm ghost" data-place="' + esc(e.code) + '">' + I.pin + 'מיקום</button>' +
+          '<button class="btn sm ghost" data-qr="' + esc(e.code) + '">' + I.qr + 'ברקוד</button>' +
+          '<button class="btn sm ghost" data-rep="' + esc(e.code) + '">' + I.rep + 'דוח</button>' +
+          '<button class="btn sm ghost" data-act="' + esc(e.code) + '" data-v="' + (!e.active) + '">' + (e.active ? I.lock + 'סגירה' : I.open + 'פתיחה') + '</button>' +
+        '</div></div>').join('')
+        : empty('cal', 'עדיין אין אירועים', 'יוצרים את הראשון למעלה, ומדפיסים את הברקוד לכניסת הצוות.');
+      fillEventSelects();
+    } catch (x) { err(x.message); }
+  }
+  $('evRows').addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.qr) { const ev = EVENTS.find(x => x.code === b.dataset.qr); showQr(ev.code, ev.name, ev.dateText); }
+    if (b.dataset.place) {
+      const row = b.closest('.ev'), ev = EVENTS.find(x => x.code === b.dataset.place);
+      const open = row.nextElementSibling && row.nextElementSibling.classList.contains('ev-place');
+      document.querySelectorAll('.ev-place').forEach(x => x.remove());
+      if (open) return;
+      row.insertAdjacentHTML('afterend', '<form class="ev-place row" data-code="' + esc(ev.code) + '" style="padding:4px 8px 16px">' +
+        '<label class="f">מיקום האולם<input data-f="place" dir="auto" placeholder="הדבקת קישור מגוגל מפות" value="' + (ev.lat != null ? esc(ev.lat + ', ' + ev.lng) : '') + '"></label>' +
+        '<button class="btn sm ghost" type="button" data-here>' + I.pin + 'המיקום שלי עכשיו</button>' +
+        '<label class="f" style="flex:0 1 130px">רדיוס<span class="unit"><input class="sm" type="number" data-f="radius" min="50" max="5000" step="50" value="' + (ev.radius || 300) + '"><i>מטר</i></span></label>' +
+        '<button class="btn sm">שמירת מיקום</button>' + (ev.lat != null ? '<button class="link" type="button" data-noplace>הסרת מיקום</button>' : '') + '</form>');
+      row.nextElementSibling.querySelector('[data-f=place]').focus();
+    }
+    if (b.dataset.rep) { openTab('report'); $('fEvent').value = b.dataset.rep; $('fFrom').value = ''; $('fTo').value = ''; runReport(); }
+    if (b.dataset.act) {
+      busy(b, true);
+      try { await call('setEventActive', b.dataset.act, b.dataset.v === 'true'); await loadEvents(); ok(b.dataset.v === 'true' ? 'האירוע נפתח לסימון נוכחות' : 'האירוע נסגר. עובדים לא יוכלו לסמן בו כניסה'); }
+      catch (x) { err(x.message); busy(b, false); }
+    }
+  });
+  /* מיקום: "המיקום שלי עכשיו" (כשהמנהל באולם) או קישור מגוגל מפות */
+  function here() {
+    return new Promise((res, rej) => {
+      if (!navigator.geolocation) return rej(new Error('הדפדפן לא תומך במיקום'));
+      navigator.geolocation.getCurrentPosition(p => res({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }),
+        e => rej(new Error(e.code === 1 ? 'אין הרשאת מיקום לדפדפן. מאשרים בהגדרות האתר ומנסים שוב' : 'לא הצלחתי לקבל מיקום. נסו שוב')),
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 });
+    });
+  }
+  const placeText = p => p.lat.toFixed(6) + ', ' + p.lng.toFixed(6);
+  async function fillHere(input, btn) {
+    busy(btn, true);
+    try { const p = await here(); input.value = placeText(p); ok('המיקום נקלט' + (p.acc ? ' (דיוק ' + Math.round(p.acc) + ' מטר)' : '')); }
+    catch (x) { err(x.message); }
+    busy(btn, false);
+  }
+  $('evHere').onclick = () => fillHere($('evPlace'), $('evHere'));
+  $('evRows').addEventListener('click', e => {
+    const f = e.target.closest('.ev-place'); if (!f) return;
+    if (e.target.closest('[data-here]')) fillHere(f.querySelector('[data-f=place]'), e.target.closest('[data-here]'));
+    if (e.target.closest('[data-noplace]')) savePlace(f, true);
+  });
+  $('evRows').addEventListener('submit', e => { const f = e.target.closest('.ev-place'); if (f) { e.preventDefault(); savePlace(f, false); } });
+  async function savePlace(f, clear) {
+    const place = clear ? '' : f.querySelector('[data-f=place]').value.trim();
+    if (!clear && !place) return err('מדביקים קישור או לוחצים "המיקום שלי עכשיו"');
+    const btn = f.querySelector('button:not([type])'); busy(btn, true);
+    try {
+      const r = await call('setEventPlace', f.dataset.code, place, f.querySelector('[data-f=radius]').value);
+      ok(r ? 'המיקום נשמר. סימון יתאפשר רק עד ' + r.radius + ' מטר מהאולם' : 'המיקום הוסר. עכשיו המיקום רק נרשם, בלי חסימה');
+      await loadEvents();
+    } catch (x) { err(x.message); busy(btn, false); }
+  }
+  $('newEvent').addEventListener('submit', async e => {
+    e.preventDefault(); busy($('evBtn'), true);
+    try {
+      const code = await call('createEvent', $('evName').value, $('evDate').value, $('evPlace').value.trim(), $('evRadius').value);
+      const [y, m, d] = $('evDate').value.split('-');
+      showQr(code, $('evName').value, d + '/' + m + '/' + y);
+      $('evName').value = ''; $('evPlace').value = '';
+      ok('האירוע נוצר. מדפיסים את הברקוד ותולים בכניסה לצוות.');
+      loadEvents();
+    } catch (x) { err(x.message); }
+    busy($('evBtn'), false);
+  });
+
+  let qrData = null;
+  function showQr(code, name, date) {
+    const url = SITE + '?e=' + code;
+    $('qr').innerHTML = '';
+    new QRCode($('qr'), { text: url, width: 368, height: 368, correctLevel: QRCode.CorrectLevel.M });
+    $('qrTitle').textContent = name + ' · ' + date;
+    $('qrCode').textContent = code;
+    $('qrUrl').textContent = url;
+    $('qrCard').hidden = false;
+    qrData = { code, name, date, url };
+    $('qrCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  $('copyUrl').onclick = async () => {
+    try { await navigator.clipboard.writeText(qrData.url); ok('הקישור הועתק'); }
+    catch (e) { const r = document.createRange(); r.selectNodeContents($('qrUrl')); getSelection().removeAllRanges(); getSelection().addRange(r); ok('הקישור מסומן. מעתיקים עם Ctrl+C'); }
+  };
+  $('printQr').onclick = () => {
+    const holder = document.createElement('div');
+    new QRCode(holder, { text: qrData.url, width: 800, height: 800, correctLevel: QRCode.CorrectLevel.M });
+    setTimeout(() => {
+      const c = holder.querySelector('canvas');
+      const img = c ? c.toDataURL('image/png') : holder.querySelector('img').src;
+      const w = window.open('', '_blank');
+      if (!w) return err('הדפדפן חסם חלון חדש. מאפשרים חלונות קופצים לאתר ומנסים שוב.');
+      w.document.write('<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>ברקוד נוכחות · ' + esc(qrData.name) + '</title>' +
+        '<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700&family=Assistant:wght@600;800&display=swap" rel="stylesheet">' +
+        '<style>@page{size:A4;margin:14mm}*{box-sizing:border-box}body{margin:0;font-family:Assistant,Arial,sans-serif;color:#1C1916;text-align:center}' +
+        '.p{display:grid;justify-items:center;padding-top:6mm}.k{font:800 22px Assistant,Arial,sans-serif;color:#8A6A2F}' +
+        'h1{font:700 64px/1.05 "Frank Ruhl Libre",serif;margin:6mm 0 3mm;max-width:17cm}h2{font:600 26px Assistant,Arial,sans-serif;margin:0 0 10mm;color:#675F55}' +
+        'img{width:118mm;height:118mm;image-rendering:pixelated}.steps{display:flex;gap:10mm;justify-content:center;margin-top:10mm;font:800 22px Assistant,Arial,sans-serif}' +
+        '.steps span{display:block;font-weight:600;font-size:17px;color:#675F55}.c{margin-top:9mm;font:600 15px Assistant,Arial,sans-serif;color:#8F877C;letter-spacing:.06em}</style></head><body><div class="p">' +
+        '<div class="k">שעון נוכחות לצוות</div><h1>סורקים בכניסה וביציאה</h1><h2>' + esc(qrData.name) + ' · ' + esc(qrData.date) + '</h2>' +
+        '<img src="' + img + '" alt="">' +
+        '<div class="steps"><div>מגיעים<span>סורקים ולוחצים "כניסה"</span></div><div>הולכים הביתה<span>סורקים ולוחצים "יציאה"</span></div></div>' +
+        '<div class="c">קוד אירוע ' + esc(qrData.code) + '</div></div>' +
+        '<script>window.onload=function(){(document.fonts?document.fonts.ready:Promise.resolve()).then(function(){setTimeout(function(){window.print()},150)})}<\/script></body></html>');
+      w.document.close();
+    }, 100);
+  };
+
+  /* ---------- טבלת משמרות משותפת (דוח + לשונית משמרות) עם עריכה במקום ---------- */
+  let SHIFTS = {};
+  function shiftRow(s, opts) {
+    const closed = !!s.end;
+    const status = !closed ? '<span class="tag warn">פתוחה</span>'
+      : s.paid >= s.pay && s.pay > 0 ? '<span class="tag ok">' + I.ok + 'שולם</span>'
+      : s.paid > 0 ? '<span class="tag warn">שולם חלקית</span>' : '';
+    return '<tr data-sid="' + esc(s.id) + '">' +
+      '<td class="strong">' + esc(s.name) + '</td><td>' + dept(s.dept) + '</td>' + (opts.event ? '<td>' + esc(s.event) + '</td>' : '') +
+      '<td data-c="in">' + esc(s.start) + '</td><td data-c="out">' + (closed ? esc(s.end) : '') + '</td>' +
+      '<td class="num">' + (s.hours == null ? '' : hrs(s.hours)) + '</td>' +
+      '<td class="num">' + (s.otHours ? hrs(s.otHours) : '') + '</td>' +
+      '<td class="num strong">' + (s.pay == null ? '' : money(s.pay)) + '</td>' +
+      '<td>' + status + '</td><td>' + locLinks(s.note) + '</td>' +
+      '<td><div class="acts"><button class="btn sm ghost" data-edit="' + esc(s.id) + '" aria-label="עריכת משמרת של ' + esc(s.name) + '">' + I.edit + (closed ? 'עריכה' : 'סגירה') + '</button></div></td></tr>';
+  }
+  function shiftTable(list, opts) {
+    list.forEach(s => SHIFTS[s.id] = s);
+    return '<div class="tbl"><table><thead><tr><th>עובד</th><th>מחלקה</th>' + (opts.event ? '<th>אירוע</th>' : '') +
+      '<th>כניסה</th><th>יציאה</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th>מצב</th><th>מיקום</th><th></th></tr></thead><tbody>' +
+      list.map(s => shiftRow(s, opts)).join('') + '</tbody></table></div>';
+  }
+  /* עריכה: כפתור "עריכה" הופך את שעות השורה לשדות */
+  document.addEventListener('click', async e => {
+    const ed = e.target.closest('[data-edit]');
+    if (ed) {
+      const tr = ed.closest('tr'), s = SHIFTS[ed.dataset.edit];
+      if (tr.classList.contains('editing')) return;
+      tr.classList.add('editing');
+      tr.querySelector('[data-c=in]').innerHTML = '<input class="sm" type="datetime-local" data-f="in" value="' + esc(s.startIso) + '" aria-label="כניסה">';
+      tr.querySelector('[data-c=out]').innerHTML = '<input class="sm" type="datetime-local" data-f="out" value="' + esc(s.endIso || '') + '" min="' + esc(s.startIso) + '" aria-label="יציאה">';
+      ed.parentNode.innerHTML = '<button class="btn sm" data-save="' + esc(s.id) + '">שמירה</button><button class="btn sm danger" data-del="' + esc(s.id) + '" aria-label="מחיקת המשמרת">' + I.trash + '</button><button class="link" data-cancel>ביטול</button>';
+      tr.querySelector('[data-f=' + (s.end ? 'in' : 'out') + ']').focus();
+      return;
+    }
+    if (e.target.closest('[data-cancel]')) { refreshShiftViews(); return; }
+    const sv = e.target.closest('[data-save]');
+    if (sv) {
+      const tr = sv.closest('tr'), s = SHIFTS[sv.dataset.save];
+      const vin = tr.querySelector('[data-f=in]').value, vout = tr.querySelector('[data-f=out]').value;
+      if (!vin) return err('חסרה שעת כניסה');
+      if (s.end && !vout) return err('למשמרת סגורה חייבת להיות שעת יציאה');
+      busy(sv, true);
+      try {
+        const r = await call('editShift', s.id, vin, vout);
+        ok(vout ? 'נשמר · ' + hrs(r.hours) + ' שעות · ' + money(r.pay) : 'שעת הכניסה עודכנה');
+        refreshShiftViews();
+      } catch (x) { err(x.message); busy(sv, false); }
+      return;
+    }
+    const dl = e.target.closest('[data-del]');
+    if (dl) {
+      if (!armed(dl, 'למחוק?')) return;
+      busy(dl, true);
+      try { await call('deleteShift', dl.dataset.del); ok('המשמרת נמחקה'); refreshShiftViews(); }
+      catch (x) { err(x.message); busy(dl, false); }
+    }
+  });
+  function refreshShiftViews() {
+    if (!$('tab-report').hidden && lastFilter) runReport(true);
+    if (!$('tab-shifts').hidden) loadShifts();
+  }
+
+  /* ---------- דוח ותשלומים ---------- */
+  $('repForm').addEventListener('submit', e => { e.preventDefault(); runReport(); });
+  async function runReport(quiet) {
+    busy($('repBtn'), true);
+    if (!quiet) {
+      lastFilter = { code: $('fEvent').value, from: $('fFrom').value, to: $('fTo').value, dept: $('fDept').value };
+      $('repOut').innerHTML = '<div class="card"><span class="sk" style="width:30%;height:44px"></span><span class="sk" style="height:10px"></span></div><div class="card"><div class="tbl"><table><tbody>' + skRows(8, 5) + '</tbody></table></div></div>';
+    }
+    try { renderReport(await call('getReport', lastFilter)); } catch (x) { err(x.message); if (!quiet) $('repOut').innerHTML = ''; }
+    busy($('repBtn'), false);
+  }
+  function renderReport(r) {
+    const t = r.total, depts = r.depts.filter(d => !lastFilter.dept || d.dept === lastFilter.dept);
+    const pct = t.pay > 0 ? Math.min(100, Math.round(t.paid / t.pay * 100)) : 0;
+    let h = '';
+    if (r.open.length) h += '<div class="banner" role="status">' + I.err + '<span>' + r.open.length + ' משמרות עדיין פתוחות ולא נכללו בסכום.</span><button type="button" id="goOpen">לסגירה</button></div>';
+    h += '<div class="card total">' +
+      '<div class="total-num"><span class="k">' + (t.due > 0 ? 'נשאר לשלם' : t.due < 0 ? 'שולם ביתר' : 'הכל שולם') + '</span>' +
+        '<span class="v' + (t.due <= 0 ? ' zero' : '') + '">' + money(Math.abs(t.due)) + '</span>' +
+        '<span class="s">מתוך ' + money(t.pay) + ' · ' + hrs(t.hours) + ' שעות' + (t.otHours ? ' (' + hrs(t.otHours) + ' נוספות)' : '') + ' · ' + t.workers + ' עובדים</span></div>' +
+      (t.pay > 0 ? '<div class="paidbar"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><div class="lbl"><span>שולם ' + money(t.paid) + '</span><span>' + pct + '%</span></div></div>' : '') +
+      '<div class="legend">' + depts.map(d => '<div class="' + (d.pay ? '' : 'zero') + '" style="--dc:' + DCOL[d.dept] + '"><span class="k">' + esc(d.dept) + '</span><span class="v">' + money(d.pay) + '</span><span class="s">' + (d.due > 0 ? 'נשאר ' + money(d.due) + ' · ' : '') + hrs(d.hours) + ' שעות · ' + d.workers + ' עובדים</span></div>').join('') + '</div>' +
+      '</div>';
+    h += '<div class="card"><div class="head"><h2>לפי עובד</h2><div class="acts no-print"><button class="btn ghost" id="printRep">' + I.print + 'הדפסה</button><button class="btn ghost" id="exportBtn"' + (r.workers.length ? '' : ' disabled') + '>' + I.sheet + 'ייצוא לגיליון</button></div></div>';
+    h += r.workers.length ? '<div class="tbl"><table><thead><tr><th>שם</th><th>מחלקה</th><th>טלפון</th><th class="num">משמרות</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th class="num">שולם</th><th class="num">נשאר</th><th></th></tr></thead><tbody>' +
+      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong">' + esc(w.name) + '</td><td>' + dept(w.dept) + '</td><td class="ltr">' + esc(w.phone) + '</td>' +
+        '<td class="num">' + w.shifts + '</td><td class="num">' + hrs(w.hours) + '</td><td class="num">' + (w.otHours ? hrs(w.otHours) : '') + '</td>' +
+        '<td class="num strong">' + money(w.pay) + '</td><td class="num">' + (w.paid ? money(w.paid) : '') + '</td>' +
+        '<td class="num ' + (w.due > 0 ? 'due' : '') + '">' + (w.due > 0 ? money(w.due) : w.due < 0 ? '<span class="tag err">ביתר ' + money(-w.due) + '</span>' : '') + '</td>' +
+        '<td><div class="acts">' + (w.due > 0
+          ? '<button class="btn sm good" data-pay="' + esc(w.id) + '" data-amt="' + w.due + '" data-name="' + esc(w.name) + '">' + I.coin + 'סימון כשולם</button>'
+          : '<span class="tag ok">' + I.ok + 'שולם</span><button class="link" data-unpay="' + esc(w.id) + '" data-name="' + esc(w.name) + '">ביטול</button>') +
+        '</div></td></tr>').join('') +
+      '</tbody><tfoot><tr><td colspan="4">סה"כ</td><td class="num">' + hrs(t.hours) + '</td><td class="num">' + (t.otHours ? hrs(t.otHours) : '') + '</td><td class="num">' + money(t.pay) + '</td><td class="num">' + money(t.paid) + '</td><td class="num">' + money(Math.max(0, t.due)) + '</td><td></td></tr></tfoot></table></div>'
+      : empty('rep', 'אין משמרות סגורות בטווח הזה', 'אפשר להרחיב את התאריכים או לבחור "כל האירועים".');
+    h += '</div>';
+    if (r.shifts.length) h += '<details class="card"' + (r.shifts.length <= 12 ? ' open' : '') + '><summary style="cursor:pointer;font-weight:800">כל המשמרות (' + r.shifts.length + ')</summary>' + shiftTable(r.shifts, { event: !lastFilter.code }) + '</details>';
+    $('repOut').innerHTML = h;
+    if ($('goOpen')) $('goOpen').onclick = () => { $('sEvent').value = lastFilter.code || ''; $('sOpenOnly').checked = true; openTab('shifts'); };
+    $('printRep').onclick = () => window.print();
+    const eb = $('exportBtn');
+    if (eb) eb.onclick = async () => {
+      busy(eb, true);
+      const ev = EVENTS.find(e => e.code === lastFilter.code);
+      try {
+        const url = await call('exportReport', lastFilter, ev ? ev.name + ' ' + ev.dateText.replace(/\//g, '-') : '');
+        ok('הדוח נשמר כגיליון חדש בקובץ.', ' <a href="' + esc(url) + '" target="_blank" rel="noopener">פתיחה</a>');
+      } catch (x) { err(x.message); }
+      busy(eb, false);
+    };
+  }
+  $('repOut').addEventListener('click', async e => {
+    const p = e.target.closest('[data-pay]'), u = e.target.closest('[data-unpay]');
+    const b = p || u; if (!b) return;
+    busy(b, true);
+    try {
+      const r = await call('markPaid', lastFilter, b.dataset.pay || b.dataset.unpay, !!p);
+      ok(p ? b.dataset.name + ' סומן כשולם · ' + money(r.amount) : 'התשלום של ' + b.dataset.name + ' בוטל');
+      runReport(true);
+    } catch (x) { err(x.message); busy(b, false); }
+  });
+
+  /* ---------- משמרות ---------- */
+  $('sEvent').onchange = loadShifts;
+  $('sOpenOnly').onchange = loadShifts;
+  async function loadShifts() {
+    $('shiftsOut').innerHTML = '<div class="tbl"><table><tbody>' + skRows(8, 4) + '</tbody></table></div>';
+    try {
+      const r = await call('getReport', { code: $('sEvent').value });
+      if (!$('sEvent').value) setOpenCount(r.open.length);
+      let list = r.shifts;
+      if ($('sOpenOnly').checked) list = list.filter(s => !s.end);
+      list.sort((a, b) => (a.end ? 1 : 0) - (b.end ? 1 : 0)); // פתוחות קודם, השאר לפי הסדר מהשרת
+      $('shiftsOut').innerHTML = list.length ? shiftTable(list, { event: !$('sEvent').value })
+        : empty('check', $('sOpenOnly').checked ? 'אין משמרות פתוחות' : 'אין משמרות', $('sOpenOnly').checked ? 'כשעובד ישכח ללחוץ "יציאה", המשמרת שלו תופיע כאן.' : 'משמרות יופיעו כאן אחרי שעובדים יסמנו כניסה.');
+    } catch (x) { err(x.message); }
+  }
+
+  /* ---------- עובדים ---------- */
+  function drawWorkers() {
+    const q = $('wSearch').value.trim().toLowerCase();
+    const list = q ? WORKERS.filter(w => (w.name + ' ' + w.tz + ' ' + w.phone).toLowerCase().includes(q)) : WORKERS;
+    $('wCount').textContent = WORKERS.length ? '· ' + WORKERS.length : '';
+    $('wRows').innerHTML = list.length ? list.map(w => '<tr data-wid="' + esc(w.id) + '"><td class="strong">' + esc(w.name) + '</td><td>' + esc(w.tz) + '</td><td class="ltr">' + esc(w.phone) + '</td>' +
+      '<td><select class="sm" data-f="dept" aria-label="מחלקה של ' + esc(w.name) + '">' + DEPTS.map(d => '<option' + (d === w.dept ? ' selected' : '') + '>' + esc(d) + '</option>').join('') + '</select></td>' +
+      '<td><span class="unit" style="width:130px"><input class="sm" type="number" min="0" step="1" data-f="rate" value="' + esc(w.personalRate) + '" placeholder="לפי מחלקה" aria-label="תעריף אישי של ' + esc(w.name) + '"><i>₪</i></span></td>' +
+      '<td class="num">' + money(w.rate) + ' <span class="muted-s">' + (w.flat ? 'לאירוע' : 'לשעה') + '</span></td><td>' + esc(w.since) + '</td>' +
+      '<td><div class="acts"><button class="btn sm" data-wsave hidden>שמירה</button></div></td></tr>').join('')
+      : '<tr><td colspan="8">' + (WORKERS.length ? empty('people', 'אין התאמה לחיפוש', '') : empty('people', 'עדיין אין עובדים רשומים', 'הם יופיעו כאן אחרי הסריקה הראשונה שלהם באירוע.')) + '</td></tr>';
+  }
+  $('wSearch').addEventListener('input', drawWorkers);
+  $('wRows').addEventListener('input', e => { const tr = e.target.closest('tr'); if (tr) tr.querySelector('[data-wsave]').hidden = false; });
+  $('wRows').addEventListener('click', async e => {
+    const b = e.target.closest('[data-wsave]'); if (!b) return;
+    const tr = b.closest('tr');
+    busy(b, true);
+    try {
+      await call('updateWorker', tr.dataset.wid, { dept: tr.querySelector('[data-f=dept]').value, personalRate: tr.querySelector('[data-f=rate]').value });
+      ok('פרטי העובד עודכנו'); await loadWorkers();
+    } catch (x) { err(x.message); busy(b, false); }
+  });
+  async function loadWorkers() {
+    if (!WORKERS.length) $('wRows').innerHTML = skRows(8, 4);
+    try { WORKERS = await call('listWorkers'); drawWorkers(); } catch (x) { err(x.message); }
+  }
+
+  /* ---------- הגדרות תשלום ---------- */
+  function example(p) {
+    const h = 10, ot = Math.max(0, h - p.otAfter);
+    const base = p.method === 'גלובלי' ? p.rate : h * p.rate;
+    const total = base + ot * p.otExtra;
+    return 'דוגמה: ' + h + ' שעות באירוע = <b>' + money(total) + '</b>' + (ot && p.otExtra ? ' <span class="muted-s">(' + (p.method === 'גלובלי' ? money(p.rate) : h + '×' + money(p.rate)) + ' + ' + hrs(ot) + '×' + money(p.otExtra) + ')</span>' : '');
+  }
+  function polCard(p, i) {
+    const n = 'm' + i;
+    return '<div class="card pol" data-dept="' + esc(p.dept) + '" style="--dc:' + DCOL[p.dept] + ';box-shadow:none;background:var(--ground)">' +
+      '<h3>' + dept(p.dept) + '</h3>' +
+      '<div class="seg" role="radiogroup" aria-label="שיטת תשלום ' + esc(p.dept) + '">' +
+        '<label><input type="radio" name="' + n + '" value="שעתי"' + (p.method !== 'גלובלי' ? ' checked' : '') + '><span>לפי שעה</span></label>' +
+        '<label><input type="radio" name="' + n + '" value="גלובלי"' + (p.method === 'גלובלי' ? ' checked' : '') + '><span>גלובלי לאירוע</span></label></div>' +
+      '<div class="grid">' +
+        '<label class="f wide"><span data-ratelbl>' + (p.method === 'גלובלי' ? 'סכום לאירוע' : 'תעריף לשעה') + '</span><span class="unit"><input type="number" min="0" step="1" data-f="rate" value="' + p.rate + '" required><i>₪</i></span></label>' +
+        '<label class="f">שעות נוספות אחרי<span class="unit"><input type="number" min="0" step="0.5" data-f="otAfter" value="' + p.otAfter + '" required><i>שעות</i></span></label>' +
+        '<label class="f">תוספת לכל שעה נוספת<span class="unit"><input type="number" min="0" step="1" data-f="otExtra" value="' + p.otExtra + '" required><i>₪</i></span></label>' +
+      '</div><div class="example" data-ex>' + example(p) + '</div></div>';
+  }
+  function readPolicies() {
+    return [...document.querySelectorAll('.pol')].map(c => ({
+      dept: c.dataset.dept,
+      method: c.querySelector('input[type=radio]:checked').value,
+      rate: Number(c.querySelector('[data-f=rate]').value),
+      otAfter: Number(c.querySelector('[data-f=otAfter]').value),
+      otExtra: Number(c.querySelector('[data-f=otExtra]').value)
+    }));
+  }
+  async function loadSettings() {
+    $('policies').innerHTML = '<span class="sk" style="height:220px;border-radius:16px"></span>'.repeat(2);
+    try { POLICY = (await call('getSettings')).depts; $('policies').innerHTML = POLICY.map(polCard).join(''); $('setStatus').textContent = ''; }
+    catch (x) { err(x.message); }
+  }
+  $('policies').addEventListener('input', e => {
+    const c = e.target.closest('.pol'); if (!c) return;
+    const p = readPolicies().find(x => x.dept === c.dataset.dept);
+    c.querySelector('[data-ratelbl]').textContent = p.method === 'גלובלי' ? 'סכום לאירוע' : 'תעריף לשעה';
+    c.querySelector('[data-ex]').innerHTML = example(p);
+    $('setStatus').textContent = 'יש שינויים שלא נשמרו';
+  });
+  $('setForm').addEventListener('submit', async e => {
+    e.preventDefault(); busy($('setBtn'), true);
+    try { POLICY = (await call('saveSettings', readPolicies())).depts; $('setStatus').textContent = ''; ok('ההגדרות נשמרו. יחולו על משמרות שייסגרו מעכשיו.'); }
+    catch (x) { err(x.message); }
+    busy($('setBtn'), false);
+  });
+  $('pwForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if ($('pw1').value !== $('pw2').value) return err('שתי הסיסמאות לא זהות');
+    busy($('pwBtn'), true);
+    try {
+      await call('saveSettings', [], $('pw1').value);
+      PW = $('pw1').value; try { sessionStorage.setItem('sc_pw', PW); } catch (x) {}
+      $('pw1').value = $('pw2').value = '';
+      ok('הסיסמה הוחלפה');
+    } catch (x) { err(x.message); }
+    busy($('pwBtn'), false);
+  });
+</script>
+</body>
+</html>
