@@ -406,8 +406,8 @@
       $('inactive').hidden = false;
     } else if (ev.window === 'early' || ev.window === 'late') {
       $('inactive').textContent = ev.window === 'early'
-        ? 'האירוע ב-' + ev.date + '. אפשר לסמן כניסה רק ביום האירוע.'
-        : 'האירוע הסתיים. אפשר היה לסמן כניסה ביום האירוע וביום שאחריו.';
+        ? 'האירוע ב-' + ev.date + '. אפשר יהיה לסמן כניסה החל מ-' + (ev.opens || ev.date) + '.'
+        : 'האירוע הסתיים. אפשר היה לסמן כניסה עד ' + (ev.closes || ev.date) + '.';
       $('inactive').hidden = false;
     } else {
       $('inBtn').hidden = false;
