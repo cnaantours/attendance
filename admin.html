@@ -92,6 +92,8 @@
     table.stack td.m[data-l]::before { content: attr(data-l) ' '; color: var(--faint); font-weight: 600; }
     table.stack td.br { display: block; order: 3; flex-basis: 100%; height: 0; }
     table.stack td.a { order: 4; flex-basis: 100%; margin-top: 8px; }
+    table.stack td.f1 { order: 3; flex-basis: 100%; }
+    table.stack td.f1:empty { display: none; }
     table.stack td.a .acts { justify-content: stretch; }
     table.stack td.a .btn { flex: 1; padding-block: 10px; }
     table.stack tr.editing { background: color-mix(in srgb, var(--gold-hi) 12%, transparent); border-radius: 12px; padding-inline: 10px; }
@@ -113,13 +115,14 @@
   .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
   .row > label { flex: 1 1 180px; }
   label.f { display: grid; gap: 6px; font-size: 14px; font-weight: 700; color: var(--muted); }
-  input, select {
+  input, select, textarea {
     font: inherit; font-size: 16px; padding: 10px 12px; border-radius: var(--r-field); min-width: 0; width: 100%;
     border: 1px solid var(--surface-3); background: var(--ground); color: var(--ink);
     transition: border-color 160ms ease;
   }
-  input:hover, select:hover { border-color: var(--faint); }
-  input:focus, select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 22%, transparent); }
+  textarea { resize: vertical; line-height: 1.5; }
+  input:hover, select:hover, textarea:hover { border-color: var(--faint); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 22%, transparent); }
   input.sm, select.sm { padding: 6px 8px; font-size: 15px; }
   input[type=number] { font-variant-numeric: tabular-nums; }
   .unit { position: relative; display: block; }
@@ -249,6 +252,21 @@
   .seg input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 1px; }
   .example { background: var(--surface-2); border-radius: var(--r-field); padding: 10px 12px; font-size: 15px; font-weight: 600; color: var(--muted); }
   .example b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  /* טופס 101 */
+  .f101bar { align-items: center; }
+  .f101bar .seg span { padding: 7px 14px; font-size: 14px; }
+  .f101bar .seg b { font-weight: 700; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .f101bar .grow { flex: 1 1 0; }
+  .f101 { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .f101 .sent { font-size: 13px; color: var(--faint); white-space: nowrap; }
+  .f101 .link { font-size: 13px; }
+  #wRows select[data-f=dept] { min-width: 130px; }
+  .f101 { max-width: 240px; }
+  .tag.no101 { background: var(--err-bg); color: var(--err); }
+  .imp101 { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; background: var(--surface-2); }
+  .imp101 .stats { display: flex; flex-wrap: wrap; gap: 8px 18px; font-weight: 700; }
+  .imp101 .stats b { font-size: 20px; font-variant-numeric: tabular-nums; margin-inline-end: 4px; }
+  @media (max-width: 640px) { .f101bar .seg { width: 100%; } .f101bar .grow { display: none; } .f101bar .btn { flex: 1 1 100%; } }
   .savebar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 
   /* מצבים */
@@ -440,8 +458,19 @@
           <label class="f" style="flex:0 1 280px"><input type="search" id="wSearch" placeholder="חיפוש לפי שם, ת״ז או טלפון" aria-label="חיפוש עובד"></label>
         </div>
         <p class="note">אפשר לשנות מחלקה ולקבוע תעריף אישי. תעריף אישי ריק = תעריף המחלקה. השינוי חל על משמרות שייסגרו מעכשיו.</p>
+        <div class="row f101bar">
+          <div class="seg" role="radiogroup" aria-label="סינון לפי טופס 101" id="w101Filter">
+            <label><input type="radio" name="w101" value="all" checked><span>כולם</span></label>
+            <label><input type="radio" name="w101" value="missing"><span>חסר 101 <b id="cMissing"></b></span></label>
+          </div>
+          <span class="grow"></span>
+          <button type="button" class="btn ghost" id="imp101Btn">ייבוא רשימת 101</button>
+          <input type="file" id="imp101File" accept=".xlsx,.xls,.csv,.txt" hidden>
+          <button type="button" class="btn" id="sendAll101" hidden></button>
+        </div>
+        <div id="imp101Out"></div>
         <div class="tbl"><table class="stack">
-          <thead><tr><th>שם</th><th>ת"ז</th><th>טלפון</th><th>מחלקה</th><th>תעריף אישי</th><th class="num">בפועל</th><th>נרשם</th><th></th></tr></thead>
+          <thead><tr><th>שם</th><th>ת"ז</th><th>טלפון</th><th>טופס 101</th><th>מחלקה</th><th>תעריף אישי</th><th class="num">בפועל</th><th>נרשם</th><th></th></tr></thead>
           <tbody id="wRows"></tbody>
         </table></div>
       </div>
@@ -457,6 +486,13 @@
           <span class="note" id="setStatus"></span>
           <button class="btn" id="setBtn">שמירת הגדרות</button>
         </div>
+      </form>
+      <form class="card" id="f101Form" hidden>
+        <h2>טופס 101 בוואטסאפ</h2>
+        <p class="note">הקישור שנשלח לעובד כשלוחצים "שלח 101" בלשונית עובדים. בהודעה: <b>{שם}</b> = השם הפרטי של העובד, <b>{קישור}</b> = הקישור לטופס.</p>
+        <label class="f">קישור לטופס 101<input type="url" id="f101Url" dir="ltr" placeholder="https://..." inputmode="url"></label>
+        <label class="f">נוסח ההודעה<textarea id="f101Msg" rows="6" maxlength="1000"></textarea></label>
+        <div class="savebar"><span class="note" id="f101Status"></span><button class="btn ghost" id="f101Btn">שמירה</button></div>
       </form>
       <form class="card" id="pwForm" autocomplete="off">
         <h2>סיסמת מנהל</h2>
@@ -495,6 +531,7 @@
     trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
     coin: svg('<circle cx="12" cy="12" r="9"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.5 0-2.5.8-2.5 2s1 1.6 2.5 2 2.5.8 2.5 2-1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6.5v1.5M12 16v1.5"/>'),
     pin: svg('<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.5"/>'),
+    send: svg('<path d="M21 3 10 14M21 3l-7 18-4-7-7-4 18-7z"/>'),
     print: svg('<path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="7" y="14" width="10" height="7" rx="1"/>')
   };
   let GEO = false, PW = '', DEPTS = [], EVENTS = [], WORKERS = [], POLICY = [], lastFilter = null;
@@ -547,10 +584,12 @@
     PW = pw; busy($('loginBtn'), true); $('loginErr').hidden = true;
     try {
       const r = await call('adminLogin');
+      // השרת מחזיר טוקן כניסה. שומרים אותו במקום הסיסמה, והוא נשלח בכל קריאה.
+      if (r.token) PW = r.token;
       DEPTS = r.depts;
       $('ver').textContent = 'גרסה ' + (r.version || '');
       GEO = !!r.geo; document.body.classList.toggle('no-geo', !GEO);
-      try { sessionStorage.setItem('sc_pw', pw); } catch (e) {}
+      try { sessionStorage.setItem('sc_pw', PW); } catch (e) {}
       $('loginBox').hidden = true; $('app').hidden = false;
       $('fDept').innerHTML = '<option value="">כל המחלקות</option>' + DEPTS.map(d => '<option>' + esc(d) + '</option>').join('');
       $('evDate').value = today();
@@ -851,9 +890,9 @@
       (t.pay > 0 ? '<div class="paidbar"><div class="track"><div class="fill" style="width:' + pct + '%"></div></div><div class="lbl"><span>שולם ' + money(t.paid) + '</span><span>' + pct + '%</span></div></div>' : '') +
       '<div class="legend">' + depts.filter(d => lastFilter.dept || d.workers || d.pay).map(d => '<div class="' + (d.pay ? '' : 'zero') + '" style="--dc:' + dc(d.dept) + '"><span class="k">' + esc(d.dept) + '</span><span class="v">' + money(d.pay) + '</span><span class="s">' + (d.due > 0 ? 'נשאר ' + money(d.due) + ' · ' : '') + hrs(d.hours) + ' שעות · ' + d.workers + ' עובדים</span></div>').join('') + '</div>' +
       '</div>';
-    h += '<div class="card"><div class="head"><h2>לפי עובד</h2><div class="acts no-print"><button class="btn ghost" id="printRep">' + I.print + 'הדפסה</button><button class="btn ghost" id="exportBtn"' + (r.workers.length ? '' : ' disabled') + '>' + I.sheet + 'ייצוא לגיליון</button></div></div>';
+    h += '<div class="card"><div class="head"><h2>לפי עובד</h2><div class="acts no-print"><button class="btn ghost" id="printRep">' + I.print + 'הדפסה</button><button class="btn ghost" id="exportBtn"' + (r.workers.length ? '' : ' disabled') + '>' + I.sheet + 'הורדה לאקסל</button></div></div>';
     h += r.workers.length ? '<div class="tbl"><table class="stack"><thead><tr><th>שם</th><th>מחלקה</th><th>טלפון</th><th class="num">משמרות</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th class="num">שולם</th><th class="num">נשאר</th><th></th></tr></thead><tbody>' +
-      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong k">' + esc(w.name) + '</td><td class="m">' + dept(w.dept) + '</td><td class="ltr m">' + esc(w.phone) + '</td>' +
+      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong k">' + esc(w.name) + (w.has101 === false ? ' <span class="tag no101" title="אין טופס 101 במערכת">חסר 101</span>' : '') + '</td><td class="m">' + dept(w.dept) + '</td><td class="ltr m">' + esc(w.phone) + '</td>' +
         '<td class="num m" data-l="משמרות">' + w.shifts + '</td><td class="num m" data-l="שעות">' + hrs(w.hours) + '</td><td class="num m" data-l="ש״נ">' + (w.otHours ? hrs(w.otHours) : '') + '</td>' +
         '<td class="num strong m" data-l="לתשלום">' + money(w.pay) + '</td><td class="num m" data-l="שולם">' + (w.paid ? money(w.paid) : '') + '</td>' +
         '<td class="num v ' + (w.due > 0 ? 'due' : '') + '">' + (w.due > 0 ? money(w.due) : w.due < 0 ? '<span class="tag err">ביתר ' + money(-w.due) + '</span>' : '') + '</td>' +
@@ -873,11 +912,35 @@
       busy(eb, true);
       const ev = EVENTS.find(e => e.code === lastFilter.code);
       try {
-        const url = await call('exportReport', lastFilter, ev ? ev.name + ' ' + ev.dateText.replace(/\//g, '-') : '');
-        ok('הדוח נשמר כגיליון חדש בקובץ.', ' <a href="' + esc(url) + '" target="_blank" rel="noopener">פתיחה</a>');
+        await loadXlsx();
+        const head = ['שם מלא', 'ת"ז', 'טלפון', 'מחלקה', 'טופס 101', 'משמרות', 'שעות', 'שעות נוספות', 'לתשלום (₪)', 'שולם (₪)', 'נשאר (₪)'];
+        const rows = r.workers.map(w => [w.name, w.tz, w.phone, w.dept, w.has101 ? 'יש' : 'חסר', w.shifts, w.hours, w.otHours, w.pay, w.paid, w.due]);
+        rows.push([]);
+        r.depts.filter(d => d.workers).forEach(d => rows.push(['סה"כ ' + d.dept, '', '', '', '', d.workers + ' עובדים', d.hours, d.otHours, d.pay, d.paid, d.due]));
+        rows.push(['סה"כ כללי', '', '', '', '', t.workers + ' עובדים', t.hours, t.otHours, t.pay, t.paid, t.due]);
+        if (r.open.length) rows.push([], ['שים לב: ' + r.open.length + ' משמרות פתוחות לא נכללו בדוח']);
+        const ws = XLSX.utils.aoa_to_sheet([head].concat(rows));
+        ws['!cols'] = head.map((h, i) => ({ wch: i === 0 ? 22 : 12 }));
+        const wb = XLSX.utils.book_new();
+        wb.Workbook = { Views: [{ RTL: true }] };
+        XLSX.utils.book_append_sheet(wb, ws, 'דוח');
+        const title = ev ? ev.name + ' ' + ev.dateText.replace(/\//g, '-') : today();
+        XLSX.writeFile(wb, ('דוח ' + title).replace(/[\\/:*?"<>|]/g, '').slice(0, 90) + '.xlsx');
+        ok('הקובץ ירד למחשב');
       } catch (x) { err(x.message); }
       busy(eb, false);
     };
+  }
+  /* ספריית אקסל (SheetJS) נטענת רק כשצריך: ייצוא דוח וייבוא רשימת 101 */
+  let xlsxP = null;
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve();
+    return xlsxP = xlsxP || new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = () => res(); s.onerror = () => { xlsxP = null; rej(new Error('לא הצלחתי לטעון את רכיב האקסל. בדקו חיבור ונסו שוב')); };
+      document.head.appendChild(s);
+    });
   }
   $('repOut').addEventListener('click', async e => {
     const p = e.target.closest('[data-pay]'), u = e.target.closest('[data-unpay]');
@@ -907,18 +970,139 @@
   }
 
   /* ---------- עובדים ---------- */
+  /* טופס 101: תא הסטטוס בשורת העובד */
+  const has101Info = () => WORKERS.length && 'has101' in WORKERS[0];
+  function cell101(w) {
+    if (!('has101' in w)) return '';
+    if (w.has101) {
+      return '<div class="f101"><span class="tag ok">' + I.ok + '101' + (w.f101Manual === true ? ' · ידני' : '') + '</span>' +
+        '<button class="link" data-set101="' + esc(w.id) + '" data-v="' + (w.f101Manual === true ? 'null' : 'false') + '">' + (w.f101Manual === true ? 'ביטול הסימון' : 'סימון כחסר') + '</button></div>';
+    }
+    return '<div class="f101"><span class="tag no101">חסר 101</span>' +
+      '<button class="btn sm" data-send101="' + esc(w.id) + '">' + I.send + (w.f101SentCount ? 'שליחה שוב' : 'שלח 101') + '</button>' +
+      (w.f101SentAt ? '<span class="sent">נשלח ' + esc(w.f101SentAt) + (w.f101SentCount > 1 ? ' · ' + w.f101SentCount + ' פעמים' : '') + '</span>' : '') +
+      '<button class="link" data-set101="' + esc(w.id) + '" data-v="' + (w.f101Manual === false ? 'null' : 'true') + '">' + (w.f101Manual === false ? 'ביטול הסימון' : 'יש לו 101') + '</button></div>';
+  }
   function drawWorkers() {
     const q = $('wSearch').value.trim().toLowerCase();
-    const list = q ? WORKERS.filter(w => (w.name + ' ' + w.tz + ' ' + w.phone).toLowerCase().includes(q)) : WORKERS;
+    const only = (document.querySelector('input[name=w101]:checked') || {}).value === 'missing';
+    let list = q ? WORKERS.filter(w => (w.name + ' ' + w.tz + ' ' + w.phone).toLowerCase().includes(q)) : WORKERS;
+    if (only) list = list.filter(w => w.has101 === false);
     $('wCount').textContent = WORKERS.length ? '· ' + WORKERS.length : '';
+    const missing = WORKERS.filter(w => w.has101 === false), fresh = missing.filter(w => !w.f101SentCount);
+    $('w101Filter').hidden = !has101Info();
+    $('imp101Btn').hidden = !has101Info();
+    $('cMissing').textContent = missing.length;
+    $('sendAll101').hidden = !fresh.length;
+    $('sendAll101').innerHTML = I.send + 'שליחה ל-' + fresh.length + ' שעוד לא קיבלו';
     $('wRows').innerHTML = list.length ? list.map(w => '<tr data-wid="' + esc(w.id) + '"><td class="strong k">' + esc(w.name) + '</td><td class="m" data-l="ת״ז">' + esc(w.tz) + '</td><td class="ltr m">' + esc(w.phone) + '</td><td class="br"></td>' +
+      '<td class="f1">' + cell101(w) + '</td>' +
       '<td class="m"><select class="sm" data-f="dept" aria-label="מחלקה של ' + esc(w.name) + '">' + DEPTS.map(d => '<option' + (d === w.dept ? ' selected' : '') + '>' + esc(d) + '</option>').join('') + '</select></td>' +
       '<td class="m"><span class="unit" style="width:130px"><input class="sm" type="number" min="0" step="1" data-f="rate" value="' + esc(w.personalRate) + '" placeholder="לפי מחלקה" aria-label="תעריף אישי של ' + esc(w.name) + '"><i>₪</i></span></td>' +
       '<td class="num v">' + money(w.rate) + ' <span class="muted-s">' + (w.flat ? 'לאירוע' : 'לשעה') + '</span></td><td class="m" data-l="נרשם">' + esc(w.since) + '</td>' +
       '<td class="a"><div class="acts"><button class="btn sm" data-wsave hidden>שמירה</button></div></td></tr>').join('')
-      : '<tr><td colspan="8">' + (WORKERS.length ? empty('people', 'אין התאמה לחיפוש', '') : empty('people', 'עדיין אין עובדים רשומים', 'הם יופיעו כאן אחרי הסריקה הראשונה שלהם באירוע.')) + '</td></tr>';
+      : '<tr><td colspan="9">' + (!WORKERS.length ? empty('people', 'עדיין אין עובדים רשומים', 'הם יופיעו כאן אחרי הסריקה הראשונה שלהם באירוע.')
+        : only && !q ? empty('check', 'לכל העובדים יש טופס 101', '') : empty('people', 'אין התאמה לחיפוש', '')) + '</td></tr>';
   }
   $('wSearch').addEventListener('input', drawWorkers);
+  $('w101Filter').addEventListener('change', drawWorkers);
+
+  /* שליחת 101 לעובד אחד */
+  async function send101(id) {
+    const r = await call('sendForm101', id);
+    const w = WORKERS.find(x => x.id === id);
+    if (w) { w.f101SentAt = r.sentAt; w.f101SentCount = r.count; }
+    return w;
+  }
+  $('wRows').addEventListener('click', async e => {
+    const s = e.target.closest('[data-send101]');
+    if (s) {
+      busy(s, true);
+      try { const w = await send101(s.dataset.send101); ok('טופס 101 נשלח בוואטסאפ ל' + (w ? w.name : 'עובד')); drawWorkers(); }
+      catch (x) { err(x.message); busy(s, false); }
+      return;
+    }
+    const m = e.target.closest('[data-set101]');
+    if (m) {
+      busy(m, true);
+      try { await call('set101', m.dataset.set101, m.dataset.v === 'true' ? true : m.dataset.v === 'false' ? false : null); await loadWorkers(); }
+      catch (x) { err(x.message); busy(m, false); }
+    }
+  });
+  /* שליחה מרוכזת: רק למי שחסר לו ועוד לא קיבל. אחד-אחד עם הפסקה, כדי שוואטסאפ לא יחסום את המספר */
+  $('sendAll101').onclick = async () => {
+    const b = $('sendAll101');
+    const list = WORKERS.filter(w => w.has101 === false && !w.f101SentCount);
+    if (!list.length || !armed(b, 'לשלוח ל-' + list.length + ' עובדים? לחיצה נוספת')) return;
+    busy(b, true);
+    let sent = 0; const failed = [];
+    for (let i = 0; i < list.length; i++) {
+      b.textContent = 'שולח ' + (i + 1) + ' מתוך ' + list.length + '…';
+      try { await send101(list[i].id); sent++; } catch (x) { failed.push(list[i].name + ': ' + x.message); }
+      if (i < list.length - 1) await new Promise(r => setTimeout(r, 3000));
+    }
+    busy(b, false);
+    drawWorkers();
+    if (failed.length) err('נשלח ל-' + sent + '. לא נשלח ל-' + failed.length + ': ' + failed.slice(0, 3).join(' · '));
+    else ok('טופס 101 נשלח ל-' + sent + ' עובדים');
+  };
+
+  /* ייבוא רשימת 101 מאקסל / CSV: מזהים לבד את העמודה עם תעודות הזהות, מציגים תצוגה מקדימה, ושומרים רק באישור */
+  const tzDigits = v => String(v == null ? '' : v).replace(/\D/g, '');
+  function validTz(id) {
+    if (!/^\d{5,9}$/.test(id) || /^0+$/.test(id)) return false;
+    id = id.padStart(9, '0');
+    let sum = 0;
+    for (let i = 0; i < 9; i++) { const n = Number(id[i]) * ((i % 2) + 1); sum += n > 9 ? n - 9 : n; }
+    return sum % 10 === 0;
+  }
+  let imp101 = null;
+  $('imp101Btn').onclick = () => { $('imp101File').value = ''; $('imp101File').click(); };
+  $('imp101File').onchange = async () => {
+    const f = $('imp101File').files[0]; if (!f) return;
+    busy($('imp101Btn'), true);
+    try {
+      await loadXlsx();
+      const wb = XLSX.read(await f.arrayBuffer(), { type: 'array', raw: false });
+      let best = { score: 0 };
+      wb.SheetNames.forEach(sn => {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' });
+        const cols = Math.max(0, ...rows.map(r => r.length));
+        for (let c = 0; c < cols; c++) {
+          const vals = rows.map(r => tzDigits(r[c]));
+          const score = vals.filter(validTz).length;
+          if (score > best.score) best = { score, sheet: sn, col: c, rows };
+        }
+      });
+      if (!best.score) throw new Error('לא מצאתי בקובץ עמודה עם מספרי תעודת זהות תקינים');
+      const cells = best.rows.map(r => String(r[best.col] == null ? '' : r[best.col]).trim()).filter(Boolean);
+      const ids = [...new Set(cells.map(tzDigits).filter(validTz).map(x => x.padStart(9, '0')))];
+      const bad = cells.filter(v => !validTz(tzDigits(v))).length;
+      const set = new Set(ids);
+      const matched = WORKERS.filter(w => set.has(String(w.tz).padStart(9, '0')));
+      const nowOk = matched.filter(w => !w.has101).length;
+      imp101 = ids;
+      $('imp101Out').innerHTML = '<div class="imp101" role="status">' +
+        '<b>' + esc(f.name) + (wb.SheetNames.length > 1 ? ' · גיליון "' + esc(best.sheet) + '"' : '') + ' · עמודה ' + XLSX.utils.encode_col(best.col) + '</b>' +
+        '<div class="stats"><span><b>' + ids.length + '</b>ת״ז תקינות</span><span><b>' + matched.length + '</b>מתאימות לעובדים רשומים</span>' +
+        '<span><b>' + (ids.length - matched.length) + '</b>עוד לא נרשמו (יותאמו כשיירשמו)</span>' +
+        (bad ? '<span><b>' + bad + '</b>שורות לא תקינות (כותרות או מספרים שגויים, ידולגו)</span>' : '') + '</div>' +
+        (nowOk ? '<span class="note">' + nowOk + ' עובדים שמסומנים היום "חסר 101" יסומנו כ"יש".</span>' : '') +
+        '<label class="note" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="imp101Replace" style="width:auto"> להחליף את כל הרשימה הקיימת (בלי סימון: מוסיפים לרשימה)</label>' +
+        '<div class="row"><button class="btn" type="button" id="imp101Save">שמירת הרשימה</button><button class="link" type="button" id="imp101Cancel">ביטול</button></div></div>';
+      $('imp101Cancel').onclick = () => { imp101 = null; $('imp101Out').innerHTML = ''; };
+      $('imp101Save').onclick = async () => {
+        const b = $('imp101Save'); busy(b, true);
+        try {
+          const r = await call('import101', imp101, $('imp101Replace').checked);
+          imp101 = null; $('imp101Out').innerHTML = '';
+          ok('הרשימה נשמרה · ' + r.added + ' ת״ז חדשות · ' + r.total + ' ברשימה בסך הכל');
+          await loadWorkers();
+        } catch (x) { err(x.message); busy(b, false); }
+      };
+    } catch (x) { err(x.message); }
+    busy($('imp101Btn'), false);
+  };
   $('wRows').addEventListener('input', e => { const tr = e.target.closest('tr'); if (tr) tr.querySelector('[data-wsave]').hidden = false; });
   $('wRows').addEventListener('click', async e => {
     const b = e.target.closest('[data-wsave]'); if (!b) return;
@@ -930,7 +1114,7 @@
     } catch (x) { err(x.message); busy(b, false); }
   });
   async function loadWorkers() {
-    if (!WORKERS.length) $('wRows').innerHTML = skRows(8, 4);
+    if (!WORKERS.length) $('wRows').innerHTML = skRows(9, 4);
     try { WORKERS = await call('listWorkers'); drawWorkers(); } catch (x) { err(x.message); }
   }
 
@@ -977,7 +1161,12 @@
   }
   async function loadSettings() {
     $('policies').innerHTML = '<span class="sk" style="height:220px;border-radius:16px"></span>'.repeat(2);
-    try { POLICY = (await call('getSettings')).depts; drawPolicies(); $('setStatus').textContent = ''; }
+    try {
+      const st = await call('getSettings');
+      POLICY = st.depts; drawPolicies(); $('setStatus').textContent = '';
+      $('f101Form').hidden = !('form101Url' in st);
+      if ('form101Url' in st) { $('f101Url').value = st.form101Url; $('f101Msg').value = st.form101Msg; $('f101Status').textContent = st.form101Url ? '' : 'עוד לא הוגדר קישור. בלי קישור אי אפשר לשלוח'; }
+    }
     catch (x) { err(x.message); }
   }
   $('policies').addEventListener('input', e => {
@@ -1019,13 +1208,22 @@
     catch (x) { err(x.message); }
     busy($('setBtn'), false);
   });
+  $('f101Form').addEventListener('submit', async e => {
+    e.preventDefault();
+    busy($('f101Btn'), true);
+    try {
+      const r = await call('save101Settings', $('f101Url').value.trim(), $('f101Msg').value);
+      $('f101Url').value = r.form101Url; $('f101Msg').value = r.form101Msg; $('f101Status').textContent = '';
+      ok('ההגדרות של טופס 101 נשמרו');
+    } catch (x) { err(x.message); }
+    busy($('f101Btn'), false);
+  });
   $('pwForm').addEventListener('submit', async e => {
     e.preventDefault();
     if ($('pw1').value !== $('pw2').value) return err('שתי הסיסמאות לא זהות');
     busy($('pwBtn'), true);
     try {
       await call('saveSettings', [], $('pw1').value);
-      PW = $('pw1').value; try { sessionStorage.setItem('sc_pw', PW); } catch (x) {}
       $('pw1').value = $('pw2').value = '';
       ok('הסיסמה הוחלפה');
     } catch (x) { err(x.message); }
