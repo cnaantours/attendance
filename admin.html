@@ -892,7 +892,9 @@
       '</div>';
     h += '<div class="card"><div class="head"><h2>לפי עובד</h2><div class="acts no-print"><button class="btn ghost" id="printRep">' + I.print + 'הדפסה</button><button class="btn ghost" id="exportBtn"' + (r.workers.length ? '' : ' disabled') + '>' + I.sheet + 'הורדה לאקסל</button></div></div>';
     h += r.workers.length ? '<div class="tbl"><table class="stack"><thead><tr><th>שם</th><th>מחלקה</th><th>טלפון</th><th class="num">משמרות</th><th class="num">שעות</th><th class="num">ש״נ</th><th class="num">לתשלום</th><th class="num">שולם</th><th class="num">נשאר</th><th></th></tr></thead><tbody>' +
-      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong k">' + esc(w.name) + (w.has101 === false ? ' <span class="tag no101" title="אין טופס 101 במערכת">חסר 101</span>' : '') + '</td><td class="m">' + dept(w.dept) + '</td><td class="ltr m">' + esc(w.phone) + '</td>' +
+      r.workers.map(w => '<tr class="' + (w.due <= 0 ? 'is-paid' : '') + '"><td class="strong k">' + esc(w.name) + (w.has101 === false ? '<div class="f101" style="margin-top:4px"><span class="tag no101" title="אין טופס 101 במערכת">חסר 101</span>' +
+          '<button class="btn sm no-print" data-rsend101="' + esc(w.id) + '" data-name="' + esc(w.name) + '">' + I.send + (w.f101SentCount ? 'שליחה שוב' : 'שלח 101') + '</button>' +
+          (w.f101SentAt ? '<span class="sent no-print">נשלח ' + esc(w.f101SentAt) + '</span>' : '') + '</div>' : '') + '</td><td class="m">' + dept(w.dept) + '</td><td class="ltr m">' + esc(w.phone) + '</td>' +
         '<td class="num m" data-l="משמרות">' + w.shifts + '</td><td class="num m" data-l="שעות">' + hrs(w.hours) + '</td><td class="num m" data-l="ש״נ">' + (w.otHours ? hrs(w.otHours) : '') + '</td>' +
         '<td class="num strong m" data-l="לתשלום">' + money(w.pay) + '</td><td class="num m" data-l="שולם">' + (w.paid ? money(w.paid) : '') + '</td>' +
         '<td class="num v ' + (w.due > 0 ? 'due' : '') + '">' + (w.due > 0 ? money(w.due) : w.due < 0 ? '<span class="tag err">ביתר ' + money(-w.due) + '</span>' : '') + '</td>' +
@@ -943,6 +945,13 @@
     });
   }
   $('repOut').addEventListener('click', async e => {
+    const s1 = e.target.closest('[data-rsend101]');
+    if (s1) {
+      busy(s1, true);
+      try { await call('sendForm101', s1.dataset.rsend101); ok('טופס 101 נשלח בוואטסאפ ל' + s1.dataset.name); WORKERS = []; runReport(true); }
+      catch (x) { err(x.message); busy(s1, false); }
+      return;
+    }
     const p = e.target.closest('[data-pay]'), u = e.target.closest('[data-unpay]');
     const b = p || u; if (!b) return;
     busy(b, true);
