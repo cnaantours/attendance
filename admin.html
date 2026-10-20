@@ -684,10 +684,29 @@
       row.insertAdjacentHTML('afterend', '<form class="ev-edit ev-panel row" data-code="' + esc(ev.code) + '">' +
         '<label class="f">שם האירוע<input data-f="name" required maxlength="120" value="' + esc(ev.name) + '"></label>' +
         '<label class="f" style="flex:0 1 190px">תאריך<input type="date" data-f="date" required value="' + esc(ev.date) + '"></label>' +
-        '<button class="btn sm">שמירה</button><button class="link" type="button" data-cancelev>ביטול</button></form>');
+        '<button class="btn sm">שמירה</button><button class="link" type="button" data-cancelev>ביטול</button>' +
+        '<span style="flex:1"></span><button class="btn sm danger" type="button" data-delev="' + esc(ev.code) + '">' + I.trash + 'מחיקת האירוע</button></form>');
       const inp = row.nextElementSibling.querySelector('[data-f=name]'); inp.focus(); inp.select();
     }
     if (b.dataset.cancelev !== undefined) { b.closest('.ev-edit').remove(); return; }
+    if (b.dataset.delev) {
+      if (!armed(b, 'למחוק את האירוע? לחיצה נוספת')) return;
+      busy(b, true);
+      try {
+        let r = await call('deleteEvent', b.dataset.delev, false);
+        if (r.needsConfirm) {
+          const msg = 'באירוע "' + r.name + '" יש ' + r.shifts + ' משמרות של ' + r.workers + ' עובדים, בסך ' + money(r.pay) +
+            (r.paid ? ' (מתוכם ' + money(r.paid) + ' סומנו כשולם)' : '') + (r.open ? '. ' + r.open + ' משמרות עדיין פתוחות' : '') +
+            '.\n\nהמחיקה תמחק גם את כל המשמרות האלה, והן לא יופיעו יותר בדוחות. אי אפשר לבטל.\n\nלמחוק בכל זאת?';
+          if (!confirm(msg)) { busy(b, false); return; }
+          r = await call('deleteEvent', b.dataset.delev, true);
+        }
+        if (qrData && qrData.code === b.dataset.delev) { $('qrCard').hidden = true; qrData = null; }
+        ok('האירוע "' + r.name + '" נמחק' + (r.shifts ? ' יחד עם ' + r.shifts + ' משמרות' : ''));
+        await loadEvents();
+      } catch (x) { err(x.message); busy(b, false); }
+      return;
+    }
     if (b.dataset.place) {
       const row = b.closest('.ev'), ev = EVENTS.find(x => x.code === b.dataset.place);
       const open = row.nextElementSibling && row.nextElementSibling.classList.contains('ev-place');
